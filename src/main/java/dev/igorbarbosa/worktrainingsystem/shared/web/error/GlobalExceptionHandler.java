@@ -7,13 +7,19 @@ import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
+import dev.igorbarbosa.worktrainingsystem.shared.web.pagination.InvalidPaginationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -48,6 +54,45 @@ public class GlobalExceptionHandler {
 	ResponseEntity<ApiError> handleUnreadableMessage(HttpServletRequest request) {
 		return response(HttpStatus.BAD_REQUEST, "BAD_REQUEST", "VALIDATION_ERROR",
 				"O corpo da requisição é inválido.", request, List.of());
+	}
+
+	@ExceptionHandler({HandlerMethodValidationException.class, MethodArgumentTypeMismatchException.class})
+	ResponseEntity<ApiError> handleRequestParameterValidation(HttpServletRequest request) {
+		return response(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "VALIDATION_ERROR",
+				"Um ou mais parâmetros são inválidos.", request, List.of());
+	}
+
+	@ExceptionHandler(InvalidPaginationException.class)
+	ResponseEntity<ApiError> handleInvalidPagination(
+			InvalidPaginationException exception, HttpServletRequest request) {
+		return response(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "VALIDATION_ERROR",
+				exception.getMessage(), request, List.of());
+	}
+
+	@ExceptionHandler(ResourceNotFoundException.class)
+	ResponseEntity<ApiError> handleResourceNotFound(
+			ResourceNotFoundException exception, HttpServletRequest request) {
+		return response(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "RESOURCE_NOT_FOUND",
+				exception.getMessage(), request, List.of());
+	}
+
+	@ExceptionHandler(ResourceConflictException.class)
+	ResponseEntity<ApiError> handleResourceConflict(
+			ResourceConflictException exception, HttpServletRequest request) {
+		return response(HttpStatus.CONFLICT, "CONFLICT", exception.getCode(),
+				exception.getMessage(), request, List.of());
+	}
+
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	ResponseEntity<ApiError> handleDataIntegrityViolation(HttpServletRequest request) {
+		return response(HttpStatus.CONFLICT, "CONFLICT", "RESOURCE_ALREADY_EXISTS",
+				"Já existe um cadastro com os dados informados.", request, List.of());
+	}
+
+	@ExceptionHandler(AccessDeniedException.class)
+	ResponseEntity<ApiError> handleAccessDenied(HttpServletRequest request) {
+		return response(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "ACCESS_DENIED",
+				"Você não possui permissão para executar esta operação.", request, List.of());
 	}
 
 	@ExceptionHandler(Exception.class)
