@@ -7,8 +7,15 @@ import dev.igorbarbosa.worktrainingsystem.organizations.api.UnitResponse;
 import dev.igorbarbosa.worktrainingsystem.organizations.domain.Unit;
 import dev.igorbarbosa.worktrainingsystem.organizations.persistence.UnitRepository;
 import dev.igorbarbosa.worktrainingsystem.shared.domain.RegistrationStatus;
+import dev.igorbarbosa.worktrainingsystem.shared.web.error.BusinessRuleViolationException;
 import dev.igorbarbosa.worktrainingsystem.shared.web.error.ResourceConflictException;
+import dev.igorbarbosa.worktrainingsystem.shared.web.error.ResourceNotFoundException;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -57,6 +64,26 @@ public class UnitService {
 					criteriaBuilder.equal(root.get("status"), status));
 		}
 		return unitRepository.findAll(specification, pageable).map(UnitResponse::from);
+	}
+
+	@Transactional(readOnly = true)
+	public UnitResponse getActive(UUID id) {
+		Unit unit = unitRepository.findByIdAndOrganizationId(id, DEFAULT_ORGANIZATION_ID)
+				.orElseThrow(() -> new ResourceNotFoundException("A unidade informada não existe."));
+		if (unit.getStatus() != RegistrationStatus.ACTIVE) {
+			throw new BusinessRuleViolationException("UNIT_INACTIVE", "A unidade informada está inativa.");
+		}
+		return UnitResponse.from(unit);
+	}
+
+	@Transactional(readOnly = true)
+	public Map<UUID, UnitResponse> getAllByIds(Set<UUID> ids) {
+		if (ids.isEmpty()) {
+			return Map.of();
+		}
+		return unitRepository.findAllByIdInAndOrganizationId(ids, DEFAULT_ORGANIZATION_ID).stream()
+				.map(UnitResponse::from)
+				.collect(Collectors.toMap(UnitResponse::id, Function.identity()));
 	}
 
 	private String normalizeCode(String code) {

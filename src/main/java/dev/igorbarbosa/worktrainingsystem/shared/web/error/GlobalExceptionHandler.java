@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -83,10 +84,24 @@ public class GlobalExceptionHandler {
 				exception.getMessage(), request, List.of());
 	}
 
+	@ExceptionHandler(BusinessRuleViolationException.class)
+	ResponseEntity<ApiError> handleBusinessRuleViolation(
+			BusinessRuleViolationException exception, HttpServletRequest request) {
+		return response(HttpStatus.UNPROCESSABLE_CONTENT, "BUSINESS_RULE_VIOLATION", exception.getCode(),
+				exception.getMessage(), request, List.of());
+	}
+
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	ResponseEntity<ApiError> handleDataIntegrityViolation(HttpServletRequest request) {
 		return response(HttpStatus.CONFLICT, "CONFLICT", "RESOURCE_ALREADY_EXISTS",
 				"Já existe um cadastro com os dados informados.", request, List.of());
+	}
+
+	@ExceptionHandler(OptimisticLockingFailureException.class)
+	ResponseEntity<ApiError> handleOptimisticLockingFailure(HttpServletRequest request) {
+		return response(HttpStatus.CONFLICT, "CONFLICT", "CONCURRENT_MODIFICATION",
+				"O cadastro foi alterado por outra requisição. Recarregue os dados e tente novamente.",
+				request, List.of());
 	}
 
 	@ExceptionHandler(AccessDeniedException.class)
