@@ -1,0 +1,2 @@
+-- Initial Flyway migration.
+-- Domain tables will be introduced by their owning features.
