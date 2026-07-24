@@ -9,10 +9,15 @@ import dev.igorbarbosa.worktrainingsystem.organizations.domain.Unit;
 import dev.igorbarbosa.worktrainingsystem.organizations.persistence.SectorRepository;
 import dev.igorbarbosa.worktrainingsystem.organizations.persistence.UnitRepository;
 import dev.igorbarbosa.worktrainingsystem.shared.domain.RegistrationStatus;
+import dev.igorbarbosa.worktrainingsystem.shared.web.error.BusinessRuleViolationException;
 import dev.igorbarbosa.worktrainingsystem.shared.web.error.ResourceConflictException;
 import dev.igorbarbosa.worktrainingsystem.shared.web.error.ResourceNotFoundException;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -70,6 +75,26 @@ public class SectorService {
 					criteriaBuilder.equal(root.get("unit").get("id"), unitId));
 		}
 		return sectorRepository.findAll(specification, pageable).map(SectorResponse::from);
+	}
+
+	@Transactional(readOnly = true)
+	public SectorResponse getActive(UUID id) {
+		Sector sector = sectorRepository.findByIdAndOrganizationId(id, DEFAULT_ORGANIZATION_ID)
+				.orElseThrow(() -> new ResourceNotFoundException("O setor informado não existe."));
+		if (sector.getStatus() != RegistrationStatus.ACTIVE) {
+			throw new BusinessRuleViolationException("SECTOR_INACTIVE", "O setor informado está inativo.");
+		}
+		return SectorResponse.from(sector);
+	}
+
+	@Transactional(readOnly = true)
+	public Map<UUID, SectorResponse> getAllByIds(Set<UUID> ids) {
+		if (ids.isEmpty()) {
+			return Map.of();
+		}
+		return sectorRepository.findAllByIdInAndOrganizationId(ids, DEFAULT_ORGANIZATION_ID).stream()
+				.map(SectorResponse::from)
+				.collect(Collectors.toMap(SectorResponse::id, Function.identity()));
 	}
 
 	private String normalizeCode(String code) {

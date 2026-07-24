@@ -27,8 +27,8 @@ class WorkTrainingSystemApplicationTests {
 		MigrationInfo migration = flyway.info().current();
 
 		assertThat(migration).isNotNull();
-		assertThat(migration.getVersion().getVersion()).isEqualTo("2");
-		assertThat(migration.getDescription()).isEqualTo("create organization structure");
+		assertThat(migration.getVersion().getVersion()).isEqualTo("3");
+		assertThat(migration.getDescription()).isEqualTo("create employees");
 	}
 
 }

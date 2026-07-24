@@ -7,8 +7,15 @@ import dev.igorbarbosa.worktrainingsystem.jobs.api.JobResponse;
 import dev.igorbarbosa.worktrainingsystem.jobs.domain.Job;
 import dev.igorbarbosa.worktrainingsystem.jobs.persistence.JobRepository;
 import dev.igorbarbosa.worktrainingsystem.shared.domain.RegistrationStatus;
+import dev.igorbarbosa.worktrainingsystem.shared.web.error.BusinessRuleViolationException;
 import dev.igorbarbosa.worktrainingsystem.shared.web.error.ResourceConflictException;
+import dev.igorbarbosa.worktrainingsystem.shared.web.error.ResourceNotFoundException;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -59,6 +66,26 @@ public class JobService {
 					criteriaBuilder.equal(root.get("status"), status));
 		}
 		return jobRepository.findAll(specification, pageable).map(JobResponse::from);
+	}
+
+	@Transactional(readOnly = true)
+	public JobResponse getActive(UUID id) {
+		Job job = jobRepository.findByIdAndOrganizationId(id, DEFAULT_ORGANIZATION_ID)
+				.orElseThrow(() -> new ResourceNotFoundException("O cargo informado não existe."));
+		if (job.getStatus() != RegistrationStatus.ACTIVE) {
+			throw new BusinessRuleViolationException("JOB_INACTIVE", "O cargo informado está inativo.");
+		}
+		return JobResponse.from(job);
+	}
+
+	@Transactional(readOnly = true)
+	public Map<UUID, JobResponse> getAllByIds(Set<UUID> ids) {
+		if (ids.isEmpty()) {
+			return Map.of();
+		}
+		return jobRepository.findAllByIdInAndOrganizationId(ids, DEFAULT_ORGANIZATION_ID).stream()
+				.map(JobResponse::from)
+				.collect(Collectors.toMap(JobResponse::id, Function.identity()));
 	}
 
 	private String normalizeDescription(String description) {
