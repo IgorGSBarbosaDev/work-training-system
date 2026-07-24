@@ -2,3 +2,8 @@ spring:
   datasource:
     hikari:
       maximum-pool-size: 5
+  flyway:
+    enabled: true
+    clean-disabled: true
+  jpa:
+    show-sql: false

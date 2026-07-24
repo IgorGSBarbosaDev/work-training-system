@@ -149,7 +149,9 @@ public class GlobalExceptionHandler {
 				request.getRequestURI(),
 				requestId,
 				fieldErrors);
-		return ResponseEntity.status(status).body(apiError);
+		return ResponseEntity.status(status)
+				.header(REQUEST_ID_HEADER, requestId)
+				.body(apiError);
 	}
 
 	private String requestId(HttpServletRequest request) {
