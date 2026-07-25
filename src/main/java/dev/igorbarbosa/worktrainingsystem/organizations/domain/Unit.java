@@ -51,4 +51,13 @@ public class Unit extends BaseEntity {
 	public RegistrationStatus getStatus() {
 		return status;
 	}
+
+	public void update(String name, String code) {
+		this.name = name;
+		this.code = code;
+	}
+
+	public void changeStatus(RegistrationStatus status) {
+		this.status = status;
+	}
 }

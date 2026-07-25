@@ -70,4 +70,5 @@ public class AnswerOption extends BaseEntity {
 	public void changeStatus(RegistrationStatus status) {
 		this.status = status;
 	}
+	public void changeOrder(int displayOrder) { this.displayOrder = displayOrder; }
 }

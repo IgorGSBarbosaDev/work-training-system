@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -164,5 +165,43 @@ class OrganizationStructureEndpointTests {
 							{"name":"Operador","status":"ACTIVE"}
 							"""))
 				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void readsAndUpdatesOrganizationSettingsWithoutWeakeningMvpThresholds() throws Exception {
+		mockMvc.perform(get("/api/v1/organization/settings"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.expiringSoonDays").value(30))
+				.andExpect(jsonPath("$.defaultPassingScore").value(70))
+				.andExpect(jsonPath("$.defaultRequiredVideoPercentage").value(80));
+
+		mockMvc.perform(patch("/api/v1/organization/settings").with(csrf())
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"expiringSoonDays\":45,\"defaultPassingScore\":75,\"defaultRequiredVideoPercentage\":80}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.expiringSoonDays").value(45))
+				.andExpect(jsonPath("$.defaultPassingScore").value(75));
+
+		mockMvc.perform(patch("/api/v1/organization/settings").with(csrf())
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"defaultPassingScore\":69,\"defaultRequiredVideoPercentage\":79}"))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void getsUpdatesAndChangesUnitStatus() throws Exception {
+		Unit unit = unitRepository.saveAndFlush(new Unit(DEFAULT_ORGANIZATION_ID,
+				"Unidade Centro", "CEN", RegistrationStatus.ACTIVE));
+
+		mockMvc.perform(get("/api/v1/units/{id}", unit.getId()))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.code").value("CEN"));
+		mockMvc.perform(patch("/api/v1/units/{id}", unit.getId()).with(csrf())
+					.contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Unidade Central\"}"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Unidade Central"));
+		mockMvc.perform(patch("/api/v1/units/{id}/status", unit.getId()).with(csrf())
+					.contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"INACTIVE\"}"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.status").value("INACTIVE"));
 	}
 }

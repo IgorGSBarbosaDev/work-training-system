@@ -2,6 +2,10 @@ package dev.igorbarbosa.worktrainingsystem.organizations.web;
 
 import dev.igorbarbosa.worktrainingsystem.organizations.api.CreateSectorRequest;
 import dev.igorbarbosa.worktrainingsystem.organizations.api.SectorResponse;
+import dev.igorbarbosa.worktrainingsystem.organizations.api.UpdateSectorRequest;
+import dev.igorbarbosa.worktrainingsystem.organizations.api.ChangeRegistrationStatusRequest;
+import dev.igorbarbosa.worktrainingsystem.employees.api.EmployeeResponse;
+import dev.igorbarbosa.worktrainingsystem.employees.application.EmployeeService;
 import dev.igorbarbosa.worktrainingsystem.organizations.application.SectorService;
 import dev.igorbarbosa.worktrainingsystem.shared.domain.RegistrationStatus;
 import dev.igorbarbosa.worktrainingsystem.shared.web.pagination.PageResponse;
@@ -16,6 +20,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,10 +38,13 @@ public class SectorController {
 
 	private final SectorService sectorService;
 	private final PaginationFactory paginationFactory;
+	private final EmployeeService employeeService;
 
-	public SectorController(SectorService sectorService, PaginationFactory paginationFactory) {
+	public SectorController(SectorService sectorService, PaginationFactory paginationFactory,
+			EmployeeService employeeService) {
 		this.sectorService = sectorService;
 		this.paginationFactory = paginationFactory;
+		this.employeeService = employeeService;
 	}
 
 	@PostMapping
@@ -56,5 +65,35 @@ public class SectorController {
 			@RequestParam(required = false) UUID unitId) {
 		return PageResponse.from(sectorService.list(
 				search, status, unitId, paginationFactory.create(page, size, sort, SORTABLE_PROPERTIES)));
+	}
+
+	@GetMapping("/{sectorId}")
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERVISOR')")
+	public SectorResponse get(@PathVariable UUID sectorId) { return sectorService.get(sectorId); }
+
+	@PatchMapping("/{sectorId}")
+	@PreAuthorize("hasRole('ADMIN')")
+	public SectorResponse update(@PathVariable UUID sectorId, @Valid @RequestBody UpdateSectorRequest request) {
+		return sectorService.update(sectorId, request);
+	}
+
+	@PatchMapping("/{sectorId}/status")
+	@PreAuthorize("hasRole('ADMIN')")
+	public SectorResponse changeStatus(@PathVariable UUID sectorId,
+			@Valid @RequestBody ChangeRegistrationStatusRequest request) {
+		return sectorService.changeStatus(sectorId, request);
+	}
+
+	@GetMapping("/{sectorId}/employees")
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERVISOR')")
+	public PageResponse<EmployeeResponse> employees(
+			@PathVariable UUID sectorId,
+			@RequestParam(defaultValue = "0") @Min(0) int page,
+			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+			@RequestParam(defaultValue = "createdAt,desc") String sort) {
+		sectorService.get(sectorId);
+		return PageResponse.from(employeeService.listBySector(sectorId,
+				paginationFactory.create(page, size, sort,
+						Set.of("name", "registration", "email", "status", "createdAt", "updatedAt"))));
 	}
 }

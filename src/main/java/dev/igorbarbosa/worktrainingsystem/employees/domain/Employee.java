@@ -38,8 +38,14 @@ public class Employee extends BaseEntity {
 	@Column(nullable = false, length = 16)
 	private RegistrationStatus status;
 
-	@Column(name = "photo_url", length = 2048)
-	private String photoUrl;
+	@Column(name = "photo_object_key", length = 1024)
+	private String photoObjectKey;
+
+	@Column(name = "photo_content_type", length = 100)
+	private String photoContentType;
+
+	@Column(name = "photo_size_bytes")
+	private Long photoSizeBytes;
 
 	protected Employee() {
 	}
@@ -95,9 +101,9 @@ public class Employee extends BaseEntity {
 		return status;
 	}
 
-	public String getPhotoUrl() {
-		return photoUrl;
-	}
+	public String getPhotoObjectKey() { return photoObjectKey; }
+	public String getPhotoContentType() { return photoContentType; }
+	public Long getPhotoSizeBytes() { return photoSizeBytes; }
 
 	public void updateProfile(
 			String name, String registration, String email, UUID sectorId, UUID unitId) {
@@ -114,5 +120,17 @@ public class Employee extends BaseEntity {
 
 	public void changeJob(UUID jobId) {
 		this.jobId = jobId;
+	}
+
+	public void replacePhoto(String objectKey, String contentType, long sizeBytes) {
+		this.photoObjectKey = objectKey;
+		this.photoContentType = contentType;
+		this.photoSizeBytes = sizeBytes;
+	}
+
+	public void removePhoto() {
+		this.photoObjectKey = null;
+		this.photoContentType = null;
+		this.photoSizeBytes = null;
 	}
 }

@@ -14,6 +14,7 @@ public interface UnitRepository extends JpaRepository<Unit, UUID>, JpaSpecificat
 	boolean existsByOrganizationIdAndCodeIgnoreCase(UUID organizationId, String code);
 
 	Optional<Unit> findByIdAndOrganizationId(UUID id, UUID organizationId);
+	boolean existsByIdAndOrganizationId(UUID id, UUID organizationId);
 
 	Set<Unit> findAllByIdInAndOrganizationId(Set<UUID> ids, UUID organizationId);
 }

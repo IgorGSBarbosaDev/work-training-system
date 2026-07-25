@@ -42,7 +42,7 @@ public record CreateTrainingRequest(
 			@Positive(message = "O valor da validade deve ser positivo.")
 			Integer validityValue,
 			@NotNull(message = "A nota mínima é obrigatória.")
-			@DecimalMin(value = "0.0")
+			@DecimalMin(value = "70.0")
 			@DecimalMax(value = "100.0")
 			BigDecimal passingScore,
 			@Positive(message = "O máximo de tentativas deve ser positivo.")

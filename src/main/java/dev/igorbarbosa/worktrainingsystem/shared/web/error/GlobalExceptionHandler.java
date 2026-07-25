@@ -4,7 +4,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -21,13 +20,12 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import dev.igorbarbosa.worktrainingsystem.shared.web.pagination.InvalidPaginationException;
+import dev.igorbarbosa.worktrainingsystem.identity.application.IdentityAuthenticationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-	private static final String REQUEST_ID_HEADER = "X-Request-Id";
-
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	ResponseEntity<ApiError> handleMethodArgumentNotValid(
 			MethodArgumentNotValidException exception, HttpServletRequest request) {
@@ -75,6 +73,13 @@ public class GlobalExceptionHandler {
 			ResourceNotFoundException exception, HttpServletRequest request) {
 		return response(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "RESOURCE_NOT_FOUND",
 				exception.getMessage(), request, List.of());
+	}
+
+	@ExceptionHandler(IdentityAuthenticationException.class)
+	ResponseEntity<ApiError> handleIdentityAuthentication(
+			IdentityAuthenticationException exception, HttpServletRequest request) {
+		return response(exception.getStatus(), exception.getStatus().getReasonPhrase().toUpperCase().replace(' ', '_'),
+				exception.getCode(), exception.getMessage(), request, List.of());
 	}
 
 	@ExceptionHandler(ResourceConflictException.class)
@@ -150,14 +155,14 @@ public class GlobalExceptionHandler {
 				requestId,
 				fieldErrors);
 		return ResponseEntity.status(status)
-				.header(REQUEST_ID_HEADER, requestId)
+				.header(RequestCorrelationFilter.REQUEST_ID_HEADER, requestId)
 				.body(apiError);
 	}
 
 	private String requestId(HttpServletRequest request) {
-		String suppliedRequestId = request.getHeader(REQUEST_ID_HEADER);
-		return suppliedRequestId == null || suppliedRequestId.isBlank()
-				? UUID.randomUUID().toString()
-				: suppliedRequestId;
+		Object requestId = request.getAttribute(RequestCorrelationFilter.REQUEST_ID_ATTRIBUTE);
+		return requestId instanceof String value
+				? value
+				: RequestCorrelationFilter.newRequestId();
 	}
 }

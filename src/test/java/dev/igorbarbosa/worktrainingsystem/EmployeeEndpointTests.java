@@ -3,15 +3,25 @@ package dev.igorbarbosa.worktrainingsystem;
 import static dev.igorbarbosa.worktrainingsystem.shared.persistence.OrganizationScope.DEFAULT_ORGANIZATION_ID;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.igorbarbosa.worktrainingsystem.employees.domain.Employee;
 import dev.igorbarbosa.worktrainingsystem.employees.persistence.EmployeeRepository;
+import dev.igorbarbosa.worktrainingsystem.employees.persistence.EmployeeHistoryRepository;
+import dev.igorbarbosa.worktrainingsystem.identity.domain.AccessScopeGrant;
+import dev.igorbarbosa.worktrainingsystem.identity.domain.ScopeType;
+import dev.igorbarbosa.worktrainingsystem.identity.domain.User;
+import dev.igorbarbosa.worktrainingsystem.identity.domain.UserRole;
+import dev.igorbarbosa.worktrainingsystem.identity.domain.UserStatus;
+import dev.igorbarbosa.worktrainingsystem.identity.persistence.AccessScopeGrantRepository;
+import dev.igorbarbosa.worktrainingsystem.identity.persistence.UserRepository;
 import dev.igorbarbosa.worktrainingsystem.jobs.domain.Job;
 import dev.igorbarbosa.worktrainingsystem.jobs.persistence.JobRepository;
 import dev.igorbarbosa.worktrainingsystem.organizations.domain.Sector;
@@ -19,7 +29,13 @@ import dev.igorbarbosa.worktrainingsystem.organizations.domain.Unit;
 import dev.igorbarbosa.worktrainingsystem.organizations.persistence.SectorRepository;
 import dev.igorbarbosa.worktrainingsystem.organizations.persistence.UnitRepository;
 import dev.igorbarbosa.worktrainingsystem.shared.domain.RegistrationStatus;
+import dev.igorbarbosa.worktrainingsystem.shared.storage.application.ObjectStorage;
+import dev.igorbarbosa.worktrainingsystem.shared.storage.application.PresignedObjectUrl;
 import java.util.UUID;
+import java.time.Instant;
+import java.time.Duration;
+import java.net.URI;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,9 +43,12 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.mock.web.MockMultipartFile;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -37,12 +56,17 @@ import org.springframework.transaction.annotation.Transactional;
 @ActiveProfiles("test")
 @Transactional
 class EmployeeEndpointTests {
+	@MockitoBean
+	private ObjectStorage objectStorage;
 
 	private final MockMvc mockMvc;
 	private final EmployeeRepository employeeRepository;
 	private final UnitRepository unitRepository;
 	private final SectorRepository sectorRepository;
 	private final JobRepository jobRepository;
+	private final EmployeeHistoryRepository historyRepository;
+	private final UserRepository userRepository;
+	private final AccessScopeGrantRepository scopeRepository;
 
 	@Autowired
 	EmployeeEndpointTests(
@@ -50,12 +74,18 @@ class EmployeeEndpointTests {
 			EmployeeRepository employeeRepository,
 			UnitRepository unitRepository,
 			SectorRepository sectorRepository,
-			JobRepository jobRepository) {
+			JobRepository jobRepository,
+			EmployeeHistoryRepository historyRepository,
+			UserRepository userRepository,
+			AccessScopeGrantRepository scopeRepository) {
 		this.mockMvc = mockMvc;
 		this.employeeRepository = employeeRepository;
 		this.unitRepository = unitRepository;
 		this.sectorRepository = sectorRepository;
 		this.jobRepository = jobRepository;
+		this.historyRepository = historyRepository;
+		this.userRepository = userRepository;
+		this.scopeRepository = scopeRepository;
 	}
 
 	@Test
@@ -118,6 +148,20 @@ class EmployeeEndpointTests {
 					.content(requestBody("100245", "outra@empresa.com", references)))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.code").value("REGISTRATION_ALREADY_EXISTS"));
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void rejectsDuplicatedEmployeeEmailIgnoringCase() throws Exception {
+		References references = activeReferences();
+		employeeRepository.saveAndFlush(new Employee(DEFAULT_ORGANIZATION_ID, "Ana Souza", "100245",
+				"ana@empresa.com", references.job().getId(), references.sector().getId(), references.unit().getId(),
+				RegistrationStatus.ACTIVE));
+
+		mockMvc.perform(post("/api/v1/employees").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+					.content(requestBody("100246", "ANA@EMPRESA.COM", references)))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("EMAIL_ALREADY_EXISTS"));
 	}
 
 	@Test
@@ -272,8 +316,50 @@ class EmployeeEndpointTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.previousJobId").value(references.job().getId().toString()))
 				.andExpect(jsonPath("$.currentJobId").value(newJob.getId().toString()))
-				.andExpect(jsonPath("$.activitiesAdded").value(0))
-				.andExpect(jsonPath("$.assignmentsCreated").value(0));
+				.andExpect(jsonPath("$.derivedActivityEffectsPending").value(true));
+
+		mockMvc.perform(get("/api/v1/employees/{employeeId}/history", employee.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.totalElements").value(4));
+		org.assertj.core.api.Assertions.assertThat(historyRepository.findAllByEmployeeId(
+				employee.getId(), org.springframework.data.domain.Pageable.unpaged())).hasSize(4);
+	}
+
+	@Test
+	void managerScopeFiltersAtTheRepositoryAndBlocksCrossScopeDetails() throws Exception {
+		References allowed = activeReferences();
+		Unit otherUnit = unitRepository.saveAndFlush(new Unit(DEFAULT_ORGANIZATION_ID,
+				"Unidade Oeste", "OES", RegistrationStatus.ACTIVE));
+		Sector otherSector = sectorRepository.saveAndFlush(new Sector(DEFAULT_ORGANIZATION_ID,
+				otherUnit, "Logística", "LOG", RegistrationStatus.ACTIVE));
+		Job otherJob = jobRepository.saveAndFlush(new Job(DEFAULT_ORGANIZATION_ID,
+				"Logístico", null, RegistrationStatus.ACTIVE));
+		Employee inScope = employeeRepository.saveAndFlush(new Employee(DEFAULT_ORGANIZATION_ID, "Ana", "100245",
+				"ana@empresa.com", allowed.job().getId(), allowed.sector().getId(), allowed.unit().getId(),
+				RegistrationStatus.ACTIVE));
+		Employee outside = employeeRepository.saveAndFlush(new Employee(DEFAULT_ORGANIZATION_ID, "Bia", "100246",
+				"bia@empresa.com", otherJob.getId(), otherSector.getId(), otherUnit.getId(), RegistrationStatus.ACTIVE));
+		User manager = userRepository.saveAndFlush(new User(DEFAULT_ORGANIZATION_ID, "manager@empresa.com", "hash",
+				UserRole.MANAGER, UserStatus.ACTIVE, null, Instant.now()));
+		scopeRepository.saveAndFlush(new AccessScopeGrant(manager.getId(), DEFAULT_ORGANIZATION_ID,
+				ScopeType.UNIT, allowed.unit().getId()));
+
+		var managerJwt = jwt().jwt(token -> token.subject(manager.getId().toString())
+				.claim("org", DEFAULT_ORGANIZATION_ID.toString()).claim("role", "MANAGER")
+				.claim("permissions", List.of()))
+				.authorities(new SimpleGrantedAuthority("ROLE_MANAGER"));
+		mockMvc.perform(get("/api/v1/employees").with(managerJwt))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content", hasSize(1)))
+				.andExpect(jsonPath("$.content[0].id").value(inScope.getId().toString()));
+		mockMvc.perform(get("/api/v1/employees/{id}", outside.getId()).with(managerJwt))
+				.andExpect(status().isForbidden());
+		mockMvc.perform(get("/api/v1/sectors/{id}", otherSector.getId()).with(managerJwt))
+				.andExpect(status().isForbidden());
+		mockMvc.perform(get("/api/v1/jobs/{id}", allowed.job().getId()).with(managerJwt))
+				.andExpect(status().isOk());
+		mockMvc.perform(get("/api/v1/jobs/{id}", otherJob.getId()).with(managerJwt))
+				.andExpect(status().isForbidden());
 	}
 
 	@Test
@@ -298,6 +384,30 @@ class EmployeeEndpointTests {
 							""".formatted(references.job().getId())))
 				.andExpect(status().isUnprocessableContent())
 				.andExpect(jsonPath("$.code").value("EMPLOYEE_INACTIVE"));
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void validatesAndStoresEmployeePhotoWithTemporaryUrl() throws Exception {
+		References references = activeReferences();
+		Employee employee = employeeRepository.saveAndFlush(new Employee(DEFAULT_ORGANIZATION_ID, "Ana", "100245",
+				"ana@empresa.com", references.job().getId(), references.sector().getId(), references.unit().getId(),
+				RegistrationStatus.ACTIVE));
+		byte[] png = {(byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1};
+		org.mockito.Mockito.when(objectStorage.presignDownload(org.mockito.ArgumentMatchers.anyString()))
+				.thenReturn(new PresignedObjectUrl(URI.create("https://storage.example/temporary-photo"),
+						Instant.now().plus(Duration.ofMinutes(15))));
+
+		mockMvc.perform(multipart(org.springframework.http.HttpMethod.PUT, "/api/v1/employees/{id}/photo", employee.getId())
+					.file(new MockMultipartFile("file", "unsafe.png", "image/png", png)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.photoUrl").value("https://storage.example/temporary-photo"))
+				.andExpect(jsonPath("$.photoObjectKey").doesNotExist());
+
+		mockMvc.perform(multipart(org.springframework.http.HttpMethod.PUT, "/api/v1/employees/{id}/photo", employee.getId())
+					.file(new MockMultipartFile("file", "fake.png", "image/png", "not-image".getBytes())))
+				.andExpect(status().isUnprocessableContent())
+				.andExpect(jsonPath("$.code").value("PHOTO_CONTENT_INVALID"));
 	}
 
 	private References activeReferences() {

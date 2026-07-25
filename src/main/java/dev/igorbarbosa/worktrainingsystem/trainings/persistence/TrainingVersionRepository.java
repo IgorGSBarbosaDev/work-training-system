@@ -20,4 +20,10 @@ public interface TrainingVersionRepository extends JpaRepository<TrainingVersion
 
 	int countByTrainingId(UUID trainingId);
 
+	Optional<TrainingVersion> findFirstByTrainingIdAndStatusOrderByVersionNumberAsc(
+			UUID trainingId, TrainingVersionStatus status);
+
+	@org.springframework.data.jpa.repository.Query("select coalesce(max(v.versionNumber), 0) from TrainingVersion v where v.trainingId = :trainingId")
+	int findMaximumVersionNumber(UUID trainingId);
+
 }

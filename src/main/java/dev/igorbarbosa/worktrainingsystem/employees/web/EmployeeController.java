@@ -5,8 +5,10 @@ import dev.igorbarbosa.worktrainingsystem.employees.api.ChangeEmployeeJobRequest
 import dev.igorbarbosa.worktrainingsystem.employees.api.ChangeEmployeeJobResponse;
 import dev.igorbarbosa.worktrainingsystem.employees.api.ChangeEmployeeStatusRequest;
 import dev.igorbarbosa.worktrainingsystem.employees.api.EmployeeResponse;
+import dev.igorbarbosa.worktrainingsystem.employees.api.EmployeeHistoryResponse;
 import dev.igorbarbosa.worktrainingsystem.employees.api.UpdateEmployeeRequest;
 import dev.igorbarbosa.worktrainingsystem.employees.application.EmployeeService;
+import dev.igorbarbosa.worktrainingsystem.employees.application.EmployeePhotoService;
 import dev.igorbarbosa.worktrainingsystem.shared.domain.RegistrationStatus;
 import dev.igorbarbosa.worktrainingsystem.shared.web.pagination.PageResponse;
 import dev.igorbarbosa.worktrainingsystem.shared.web.pagination.PaginationFactory;
@@ -28,6 +30,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 
 @Validated
 @RestController
@@ -39,10 +45,13 @@ public class EmployeeController {
 
 	private final EmployeeService employeeService;
 	private final PaginationFactory paginationFactory;
+	private final EmployeePhotoService employeePhotoService;
 
-	public EmployeeController(EmployeeService employeeService, PaginationFactory paginationFactory) {
+	public EmployeeController(EmployeeService employeeService, PaginationFactory paginationFactory,
+			EmployeePhotoService employeePhotoService) {
 		this.employeeService = employeeService;
 		this.paginationFactory = paginationFactory;
+		this.employeePhotoService = employeePhotoService;
 	}
 
 	@PostMapping
@@ -53,7 +62,7 @@ public class EmployeeController {
 	}
 
 	@GetMapping("/{employeeId}")
-	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERVISOR')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERVISOR', 'EMPLOYEE')")
 	public EmployeeResponse getById(@PathVariable UUID employeeId) {
 		return employeeService.getById(employeeId);
 	}
@@ -109,5 +118,30 @@ public class EmployeeController {
 	public ChangeEmployeeJobResponse changeJob(
 			@PathVariable UUID employeeId, @Valid @RequestBody ChangeEmployeeJobRequest request) {
 		return employeeService.changeJob(employeeId, request);
+	}
+
+	@PutMapping(path = "/{employeeId}/photo", consumes = "multipart/form-data")
+	@PreAuthorize("hasRole('ADMIN') or (hasRole('EMPLOYEE') and @authorization.canAccessEmployee(#employeeId))")
+	public EmployeeResponse uploadPhoto(@PathVariable UUID employeeId,
+			@RequestPart("file") MultipartFile file) {
+		return employeePhotoService.upload(employeeId, file);
+	}
+
+	@DeleteMapping("/{employeeId}/photo")
+	@PreAuthorize("hasRole('ADMIN') or (hasRole('EMPLOYEE') and @authorization.canAccessEmployee(#employeeId))")
+	public ResponseEntity<Void> deletePhoto(@PathVariable UUID employeeId) {
+		employeePhotoService.delete(employeeId);
+		return ResponseEntity.noContent().build();
+	}
+
+	@GetMapping("/{employeeId}/history")
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERVISOR', 'EMPLOYEE')")
+	public PageResponse<EmployeeHistoryResponse> history(
+			@PathVariable UUID employeeId,
+			@RequestParam(defaultValue = "0") @Min(0) int page,
+			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+			@RequestParam(defaultValue = "createdAt,desc") String sort) {
+		return PageResponse.from(employeeService.history(employeeId,
+				paginationFactory.create(page, size, sort, Set.of("createdAt"))));
 	}
 }

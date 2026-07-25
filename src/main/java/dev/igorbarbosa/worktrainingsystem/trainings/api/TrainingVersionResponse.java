@@ -18,11 +18,18 @@ public record TrainingVersionResponse(
 		Integer maxAttempts,
 		int retryIntervalMinutes,
 		TrainingVersionStatus status,
-		Instant publishedAt) {
+		Instant publishedAt,
+		String trainingNameSnapshot,
+		String trainingCodeSnapshot,
+		String trainingDescriptionSnapshot,
+		String trainingCategorySnapshot,
+		boolean regulatoryStandardSnapshot) {
 
 	public static TrainingVersionResponse from(TrainingVersion version) {
 		return new TrainingVersionResponse(version.getId(), version.getTrainingId(), version.getVersionNumber(),
 				version.getWorkloadMinutes(), version.getValidityType(), version.getValidityValue(), version.getPassingScore(),
-				version.getMaxAttempts(), version.getRetryIntervalMinutes(), version.getStatus(), version.getPublishedAt());
+				version.getMaxAttempts(), version.getRetryIntervalMinutes(), version.getStatus(), version.getPublishedAt(),
+				version.getTrainingNameSnapshot(), version.getTrainingCodeSnapshot(), version.getTrainingDescriptionSnapshot(),
+				version.getTrainingCategorySnapshot(), version.isRegulatoryStandardSnapshot());
 	}
 }

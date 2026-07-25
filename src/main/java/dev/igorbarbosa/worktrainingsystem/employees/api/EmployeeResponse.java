@@ -22,14 +22,14 @@ public record EmployeeResponse(
 		Instant updatedAt) {
 
 	public static EmployeeResponse from(
-			Employee employee, JobResponse job, SectorResponse sector, UnitResponse unit) {
+			Employee employee, JobResponse job, SectorResponse sector, UnitResponse unit, String photoUrl) {
 		return new EmployeeResponse(
 				employee.getId(),
 				employee.getName(),
 				employee.getRegistration(),
 				employee.getEmail(),
 				employee.getStatus(),
-				employee.getPhotoUrl(),
+				photoUrl,
 				new Reference(job.id(), job.name()),
 				new Reference(sector.id(), sector.name()),
 				new Reference(unit.id(), unit.name()),

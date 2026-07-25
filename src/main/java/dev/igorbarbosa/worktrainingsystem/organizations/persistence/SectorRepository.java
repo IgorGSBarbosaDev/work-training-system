@@ -14,6 +14,7 @@ public interface SectorRepository extends JpaRepository<Sector, UUID>, JpaSpecif
 	boolean existsByUnitIdAndCodeIgnoreCase(UUID unitId, String code);
 
 	Optional<Sector> findByIdAndOrganizationId(UUID id, UUID organizationId);
+	boolean existsByIdAndOrganizationId(UUID id, UUID organizationId);
 
 	Set<Sector> findAllByIdInAndOrganizationId(Set<UUID> ids, UUID organizationId);
 }

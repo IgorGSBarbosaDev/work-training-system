@@ -46,6 +46,22 @@ public class TrainingVersion extends BaseEntity {
 	@Column(name = "published_at")
 	private Instant publishedAt;
 
+	@Column(name = "organization_id", nullable = false, updatable = false)
+	private UUID organizationId;
+	@Column(name = "training_name_snapshot", nullable = false)
+	private String trainingNameSnapshot;
+	@Column(name = "training_code_snapshot", nullable = false)
+	private String trainingCodeSnapshot;
+	@Column(name = "training_description_snapshot")
+	private String trainingDescriptionSnapshot;
+	@Column(name = "training_category_snapshot")
+	private String trainingCategorySnapshot;
+	@Column(name = "regulatory_standard_snapshot", nullable = false)
+	private boolean regulatoryStandardSnapshot;
+	@org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+	@Column(name = "content_snapshot", columnDefinition = "jsonb")
+	private String contentSnapshot;
+
 	protected TrainingVersion() {
 	}
 
@@ -67,6 +83,14 @@ public class TrainingVersion extends BaseEntity {
 		this.maxAttempts = maxAttempts;
 		this.retryIntervalMinutes = retryIntervalMinutes;
 		this.status = TrainingVersionStatus.DRAFT;
+	}
+
+	public TrainingVersion(Training training, int versionNumber, int workloadMinutes, ValidityType validityType,
+			Integer validityValue, BigDecimal passingScore, Integer maxAttempts, int retryIntervalMinutes) {
+		this(training.getId(), versionNumber, workloadMinutes, validityType, validityValue, passingScore,
+				maxAttempts, retryIntervalMinutes);
+		this.organizationId = training.getOrganizationId();
+		refreshDraftSnapshot(training);
 	}
 
 	public UUID getTrainingId() {
@@ -107,6 +131,26 @@ public class TrainingVersion extends BaseEntity {
 
 	public Instant getPublishedAt() {
 		return publishedAt;
+	}
+	public UUID getOrganizationId() { return organizationId; }
+	public String getTrainingNameSnapshot() { return trainingNameSnapshot; }
+	public String getTrainingCodeSnapshot() { return trainingCodeSnapshot; }
+	public String getTrainingDescriptionSnapshot() { return trainingDescriptionSnapshot; }
+	public String getTrainingCategorySnapshot() { return trainingCategorySnapshot; }
+	public boolean isRegulatoryStandardSnapshot() { return regulatoryStandardSnapshot; }
+	public String getContentSnapshot() { return contentSnapshot; }
+
+	public void refreshDraftSnapshot(Training training) {
+		if (status != TrainingVersionStatus.DRAFT) throw new IllegalStateException("Only draft snapshots can change");
+		this.organizationId = training.getOrganizationId();
+		this.trainingNameSnapshot = training.getName(); this.trainingCodeSnapshot = training.getCode();
+		this.trainingDescriptionSnapshot = training.getDescription(); this.trainingCategorySnapshot = training.getCategory();
+		this.regulatoryStandardSnapshot = training.isRegulatoryStandard();
+	}
+
+	public void capturePublicationSnapshot(Training training, String contentSnapshot) {
+		refreshDraftSnapshot(training);
+		this.contentSnapshot = contentSnapshot;
 	}
 
 	public void update(

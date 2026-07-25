@@ -20,7 +20,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest
+@SpringBootTest(properties = "app.uploads.allow-legacy-object-keys=true")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional

@@ -20,7 +20,7 @@ public class Sector extends BaseEntity {
 	private UUID organizationId;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "unit_id", nullable = false, updatable = false)
+	@JoinColumn(name = "unit_id", nullable = false)
 	private Unit unit;
 
 	@Column(nullable = false, length = 150)
@@ -62,5 +62,15 @@ public class Sector extends BaseEntity {
 
 	public RegistrationStatus getStatus() {
 		return status;
+	}
+
+	public void update(Unit unit, String name, String code) {
+		this.unit = unit;
+		this.name = name;
+		this.code = code;
+	}
+
+	public void changeStatus(RegistrationStatus status) {
+		this.status = status;
 	}
 }

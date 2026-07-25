@@ -55,6 +55,7 @@ class SectorServiceTest {
 		UUID unitId = UUID.randomUUID();
 		Unit unit = mock(Unit.class);
 		when(unit.getId()).thenReturn(unitId);
+		when(unit.getStatus()).thenReturn(RegistrationStatus.ACTIVE);
 		when(unitRepository.findByIdAndOrganizationId(unitId, DEFAULT_ORGANIZATION_ID))
 				.thenReturn(Optional.of(unit));
 		when(sectorRepository.saveAndFlush(any(Sector.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -74,6 +75,7 @@ class SectorServiceTest {
 		UUID unitId = UUID.randomUUID();
 		Unit unit = mock(Unit.class);
 		when(unit.getId()).thenReturn(unitId);
+		when(unit.getStatus()).thenReturn(RegistrationStatus.ACTIVE);
 		when(unitRepository.findByIdAndOrganizationId(unitId, DEFAULT_ORGANIZATION_ID))
 				.thenReturn(Optional.of(unit));
 		when(sectorRepository.existsByUnitIdAndNameIgnoreCase(unitId, "Manutenção")).thenReturn(true);
@@ -88,6 +90,7 @@ class SectorServiceTest {
 		UUID unitId = UUID.randomUUID();
 		Unit unit = mock(Unit.class);
 		when(unit.getId()).thenReturn(unitId);
+		when(unit.getStatus()).thenReturn(RegistrationStatus.ACTIVE);
 		when(unitRepository.findByIdAndOrganizationId(unitId, DEFAULT_ORGANIZATION_ID))
 				.thenReturn(Optional.of(unit));
 		when(sectorRepository.saveAndFlush(any(Sector.class)))

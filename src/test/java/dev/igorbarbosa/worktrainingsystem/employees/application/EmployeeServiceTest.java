@@ -14,6 +14,9 @@ import dev.igorbarbosa.worktrainingsystem.employees.api.ChangeEmployeeStatusRequ
 import dev.igorbarbosa.worktrainingsystem.employees.api.UpdateEmployeeRequest;
 import dev.igorbarbosa.worktrainingsystem.employees.domain.Employee;
 import dev.igorbarbosa.worktrainingsystem.employees.persistence.EmployeeRepository;
+import dev.igorbarbosa.worktrainingsystem.employees.persistence.EmployeeHistoryRepository;
+import dev.igorbarbosa.worktrainingsystem.identity.application.AuthorizationService;
+import dev.igorbarbosa.worktrainingsystem.shared.storage.application.ObjectStorage;
 import dev.igorbarbosa.worktrainingsystem.jobs.api.JobResponse;
 import dev.igorbarbosa.worktrainingsystem.jobs.application.JobService;
 import dev.igorbarbosa.worktrainingsystem.organizations.api.SectorResponse;
@@ -34,7 +37,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import dev.igorbarbosa.worktrainingsystem.identity.application.AuthorizationService.AccessScope;
+import dev.igorbarbosa.worktrainingsystem.identity.domain.UserRole;
 
 @ExtendWith(MockitoExtension.class)
 class EmployeeServiceTest {
@@ -54,6 +62,13 @@ class EmployeeServiceTest {
 
 	@Mock
 	private JobService jobService;
+	@Mock private AuthorizationService authorization;
+	@Mock private EmployeeHistoryRecorder history;
+	@Mock private EmployeeHistoryRepository histories;
+	@Mock private ObjectStorage storage;
+	@Mock private ApplicationEventPublisher events;
+	@Mock private EmployeeLifecyclePort lifecycle;
+	@Mock private dev.igorbarbosa.worktrainingsystem.identity.application.CurrentUserProvider currentUser;
 
 	@InjectMocks
 	private EmployeeService employeeService;
@@ -63,6 +78,12 @@ class EmployeeServiceTest {
 		unitId = UUID.randomUUID();
 		sectorId = UUID.randomUUID();
 		jobId = UUID.randomUUID();
+		org.mockito.Mockito.lenient().when(currentUser.requireCurrentUser()).thenReturn(
+				new dev.igorbarbosa.worktrainingsystem.identity.application.CurrentUser(UUID.randomUUID(),
+						DEFAULT_ORGANIZATION_ID, UserRole.ADMIN, null, Set.of()));
+		org.mockito.Mockito.lenient().when(lifecycle.initialize(any(), any())).thenReturn(EmployeeLifecyclePort.LifecycleEffects.none());
+		org.mockito.Mockito.lenient().when(lifecycle.changeJob(any(), any(), org.mockito.ArgumentMatchers.anyBoolean(), any()))
+				.thenReturn(EmployeeLifecyclePort.LifecycleEffects.none());
 	}
 
 	@Test
@@ -186,6 +207,9 @@ class EmployeeServiceTest {
 		assertThat(response.previousJobId()).isEqualTo(jobId);
 		assertThat(response.currentJobId()).isEqualTo(newJobId);
 		assertThat(response.activitiesAdded()).isZero();
+		assertThat(response.assignmentsCreated()).isZero();
+		verify(lifecycle).changeJob(any(), org.mockito.ArgumentMatchers.eq(jobId),
+				org.mockito.ArgumentMatchers.eq(false), any());
 		assertThat(employee.getJobId()).isEqualTo(newJobId);
 	}
 
@@ -245,6 +269,22 @@ class EmployeeServiceTest {
 				.extracting("code")
 				.isEqualTo("UNIT_INACTIVE");
 		assertThat(employee.getStatus()).isEqualTo(RegistrationStatus.INACTIVE);
+	}
+
+	@Test
+	void managerListUsesRepositorySpecificationInsteadOfLoadingAllEmployees() {
+		UUID userId = UUID.randomUUID();
+		when(authorization.currentScope()).thenReturn(new AccessScope(userId, DEFAULT_ORGANIZATION_ID,
+				UserRole.MANAGER, null, false, Set.of(unitId), Set.of(), Set.of()));
+		when(employeeRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class),
+				any(Pageable.class))).thenReturn(new PageImpl<>(java.util.List.of()));
+
+		var result = employeeService.list(null, null, null, null, null, null, null, Pageable.unpaged());
+
+		assertThat(result).isEmpty();
+		verify(employeeRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class),
+				any(Pageable.class));
+		verify(employeeRepository, never()).findAll();
 	}
 
 	private void stubActiveReferences(UUID sectorUnitId) {

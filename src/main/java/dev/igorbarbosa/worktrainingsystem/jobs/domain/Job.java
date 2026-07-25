@@ -51,4 +51,13 @@ public class Job extends BaseEntity {
 	public RegistrationStatus getStatus() {
 		return status;
 	}
+
+	public void update(String name, String description) {
+		this.name = name;
+		this.description = description;
+	}
+
+	public void changeStatus(RegistrationStatus status) {
+		this.status = status;
+	}
 }

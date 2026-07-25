@@ -14,7 +14,7 @@ public record QuestionnaireRequest(
 		@Size(max = 150, message = "O título deve possuir no máximo 150 caracteres.")
 		String title,
 		@NotNull(message = "A nota mínima é obrigatória.")
-		@DecimalMin(value = "0.0")
+		@DecimalMin(value = "70.0")
 		@DecimalMax(value = "100.0")
 		BigDecimal passingScore,
 		@Positive(message = "O máximo de tentativas deve ser positivo.")

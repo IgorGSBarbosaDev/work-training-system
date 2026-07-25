@@ -8,6 +8,8 @@ import dev.igorbarbosa.worktrainingsystem.trainings.api.QuestionnaireRequest;
 import dev.igorbarbosa.worktrainingsystem.trainings.api.QuestionnaireResponse;
 import dev.igorbarbosa.worktrainingsystem.trainings.api.VideoRequest;
 import dev.igorbarbosa.worktrainingsystem.trainings.api.VideoResponse;
+import dev.igorbarbosa.worktrainingsystem.trainings.api.OrderRequest;
+import dev.igorbarbosa.worktrainingsystem.organizations.api.ChangeRegistrationStatusRequest;
 import dev.igorbarbosa.worktrainingsystem.trainings.application.TrainingCatalogService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.DeleteMapping;
 
 @RestController
 public class TrainingContentController {
@@ -52,6 +55,19 @@ public class TrainingContentController {
 		return service.updateVideo(videoId, request);
 	}
 
+	@PatchMapping("/api/v1/videos/{videoId}/status")
+	@PreAuthorize("hasRole('ADMIN')")
+	public VideoResponse videoStatus(@PathVariable UUID videoId,
+			@Valid @RequestBody ChangeRegistrationStatusRequest request) {
+		return service.changeVideoStatus(videoId, request.status());
+	}
+
+	@PatchMapping("/api/v1/modules/{moduleId}/videos/order")
+	@PreAuthorize("hasRole('ADMIN')")
+	public List<VideoResponse> reorderVideos(@PathVariable UUID moduleId, @Valid @RequestBody OrderRequest request) {
+		return service.reorderVideos(moduleId, request);
+	}
+
 	@PostMapping("/api/v1/modules/{moduleId}/questionnaire")
 	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<QuestionnaireResponse> createQuestionnaire(@PathVariable UUID moduleId,
@@ -73,6 +89,19 @@ public class TrainingContentController {
 		return service.updateQuestionnaire(questionnaireId, request);
 	}
 
+	@PatchMapping("/api/v1/questionnaires/{questionnaireId}/status")
+	@PreAuthorize("hasRole('ADMIN')")
+	public QuestionnaireResponse questionnaireStatus(@PathVariable UUID questionnaireId,
+			@Valid @RequestBody ChangeRegistrationStatusRequest request) {
+		return service.changeQuestionnaireStatus(questionnaireId, request.status());
+	}
+
+	@DeleteMapping("/api/v1/modules/{moduleId}/questionnaire")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<Void> deleteQuestionnaire(@PathVariable UUID moduleId) {
+		service.deleteQuestionnaire(moduleId); return ResponseEntity.noContent().build();
+	}
+
 	@PostMapping("/api/v1/questionnaires/{questionnaireId}/questions")
 	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<QuestionResponse> createQuestion(@PathVariable UUID questionnaireId,
@@ -87,6 +116,11 @@ public class TrainingContentController {
 		return service.listQuestions(questionnaireId);
 	}
 
+	@PatchMapping("/api/v1/questionnaires/{questionnaireId}/questions/order")
+	@PreAuthorize("hasRole('ADMIN')")
+	public List<QuestionResponse> reorderQuestions(@PathVariable UUID questionnaireId,
+			@Valid @RequestBody OrderRequest request) { return service.reorderQuestions(questionnaireId, request); }
+
 	@PatchMapping("/api/v1/questions/{questionId}")
 	@PreAuthorize("hasRole('ADMIN')")
 	public QuestionResponse updateQuestion(@PathVariable UUID questionId, @Valid @RequestBody QuestionRequest request) {
@@ -97,6 +131,19 @@ public class TrainingContentController {
 	@PreAuthorize("hasRole('ADMIN')")
 	public QuestionResponse getQuestion(@PathVariable UUID questionId) {
 		return service.getQuestion(questionId);
+	}
+
+	@PatchMapping("/api/v1/questions/{questionId}/status")
+	@PreAuthorize("hasRole('ADMIN')")
+	public QuestionResponse questionStatus(@PathVariable UUID questionId,
+			@Valid @RequestBody ChangeRegistrationStatusRequest request) {
+		return service.changeQuestionStatus(questionId, request.status());
+	}
+
+	@DeleteMapping("/api/v1/questions/{questionId}")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<Void> deleteQuestion(@PathVariable UUID questionId) {
+		service.deleteQuestion(questionId); return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/api/v1/questions/{questionId}/options")
@@ -113,6 +160,11 @@ public class TrainingContentController {
 		return service.listAnswerOptions(questionId);
 	}
 
+	@PatchMapping("/api/v1/questions/{questionId}/options/order")
+	@PreAuthorize("hasRole('ADMIN')")
+	public List<AnswerOptionResponse> reorderOptions(@PathVariable UUID questionId,
+			@Valid @RequestBody OrderRequest request) { return service.reorderAnswerOptions(questionId, request); }
+
 	@PatchMapping("/api/v1/answer-options/{optionId}")
 	@PreAuthorize("hasRole('ADMIN')")
 	public AnswerOptionResponse updateAnswerOption(@PathVariable UUID optionId,
@@ -124,5 +176,18 @@ public class TrainingContentController {
 	@PreAuthorize("hasRole('ADMIN')")
 	public AnswerOptionResponse getAnswerOption(@PathVariable UUID optionId) {
 		return service.getAnswerOption(optionId);
+	}
+
+	@PatchMapping("/api/v1/answer-options/{optionId}/status")
+	@PreAuthorize("hasRole('ADMIN')")
+	public AnswerOptionResponse optionStatus(@PathVariable UUID optionId,
+			@Valid @RequestBody ChangeRegistrationStatusRequest request) {
+		return service.changeAnswerOptionStatus(optionId, request.status());
+	}
+
+	@DeleteMapping("/api/v1/answer-options/{optionId}")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<Void> deleteOption(@PathVariable UUID optionId) {
+		service.deleteAnswerOption(optionId); return ResponseEntity.noContent().build();
 	}
 }

@@ -17,4 +17,7 @@ public interface AnswerOptionRepository extends JpaRepository<AnswerOption, UUID
 
 	long countByQuestionIdAndStatusAndCorrect(UUID questionId,
 			dev.igorbarbosa.worktrainingsystem.shared.domain.RegistrationStatus status, boolean correct);
+
+	long countByQuestionIdAndStatusAndCorrectAndIdNot(UUID questionId,
+			dev.igorbarbosa.worktrainingsystem.shared.domain.RegistrationStatus status, boolean correct, UUID id);
 }

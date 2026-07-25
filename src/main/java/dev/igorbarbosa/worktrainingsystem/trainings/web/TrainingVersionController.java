@@ -4,6 +4,9 @@ import dev.igorbarbosa.worktrainingsystem.trainings.api.ModuleRequest;
 import dev.igorbarbosa.worktrainingsystem.trainings.api.ModuleResponse;
 import dev.igorbarbosa.worktrainingsystem.trainings.api.TrainingVersionRequest;
 import dev.igorbarbosa.worktrainingsystem.trainings.api.TrainingVersionResponse;
+import dev.igorbarbosa.worktrainingsystem.trainings.api.ContentSummaryResponse;
+import dev.igorbarbosa.worktrainingsystem.trainings.api.OrderRequest;
+import dev.igorbarbosa.worktrainingsystem.organizations.api.ChangeRegistrationStatusRequest;
 import dev.igorbarbosa.worktrainingsystem.trainings.application.TrainingCatalogService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -67,6 +70,17 @@ public class TrainingVersionController {
 		return service.archiveVersion(versionId);
 	}
 
+	@PostMapping("/api/v1/training-versions/{versionId}/duplicate")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<TrainingVersionResponse> duplicate(@PathVariable UUID versionId) {
+		TrainingVersionResponse response = service.duplicateVersion(versionId);
+		return ResponseEntity.created(URI.create("/api/v1/training-versions/" + response.id())).body(response);
+	}
+
+	@GetMapping("/api/v1/training-versions/{versionId}/content-summary")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ContentSummaryResponse contentSummary(@PathVariable UUID versionId) { return service.contentSummary(versionId); }
+
 	@PostMapping("/api/v1/training-versions/{versionId}/modules")
 	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ModuleResponse> createModule(@PathVariable UUID versionId,
@@ -81,6 +95,12 @@ public class TrainingVersionController {
 		return service.listModules(versionId);
 	}
 
+	@PatchMapping("/api/v1/training-versions/{versionId}/modules/order")
+	@PreAuthorize("hasRole('ADMIN')")
+	public List<ModuleResponse> reorderModules(@PathVariable UUID versionId, @Valid @RequestBody OrderRequest request) {
+		return service.reorderModules(versionId, request);
+	}
+
 	@PatchMapping("/api/v1/modules/{moduleId}")
 	@PreAuthorize("hasRole('ADMIN')")
 	public ModuleResponse updateModule(@PathVariable UUID moduleId, @Valid @RequestBody ModuleRequest request) {
@@ -91,5 +111,12 @@ public class TrainingVersionController {
 	@PreAuthorize("hasRole('ADMIN')")
 	public ModuleResponse getModule(@PathVariable UUID moduleId) {
 		return service.getModule(moduleId);
+	}
+
+	@PatchMapping("/api/v1/modules/{moduleId}/status")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ModuleResponse moduleStatus(@PathVariable UUID moduleId,
+			@Valid @RequestBody ChangeRegistrationStatusRequest request) {
+		return service.changeModuleStatus(moduleId, request.status());
 	}
 }
