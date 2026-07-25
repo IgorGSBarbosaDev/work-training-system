@@ -16,6 +16,9 @@ import java.time.LocalDate;
 
 public interface TrainingAssignmentRepository extends JpaRepository<TrainingAssignment, UUID>,
 		JpaSpecificationExecutor<TrainingAssignment> {
+	long countByOrganizationId(UUID organizationId);
+	long countByOrganizationIdAndStatus(UUID organizationId, AssignmentStatus status);
+	long countByOrganizationIdAndEmployeeIdAndStatus(UUID organizationId, UUID employeeId, AssignmentStatus status);
 	Optional<TrainingAssignment> findByIdAndOrganizationId(UUID id, UUID organizationId);
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select assignment from TrainingAssignment assignment where assignment.id = :id and assignment.organizationId = :organizationId")
@@ -45,4 +48,19 @@ public interface TrainingAssignmentRepository extends JpaRepository<TrainingAssi
 			UUID trainingVersionId, String origin, Instant assignedAt, LocalDate assignedDate,
 			LocalDate dueDate, String priority, UUID actor, boolean recertification,
 			UUID recertificationOf, String idempotencyKey, String requestHash, UUID batchId);
+
+	@Modifying(flushAutomatically = true)
+	@Query(value = """
+			insert into training_assignments (
+			 id, organization_id, employee_id, training_id, training_version_id, origin,
+			 assigned_at, assigned_date, due_date, status, priority, responsible_user_id,
+			 recertification, recertification_of_completion_id, created_at, updated_at, version)
+			values (:id, :organizationId, :employeeId, :trainingId, :trainingVersionId, 'RECERTIFICATION',
+			 :assignedAt, :assignedDate, :dueDate, 'NOT_STARTED', :priority, :actor,
+			 true, :completionId, :assignedAt, :assignedAt, 0)
+			on conflict do nothing
+			""", nativeQuery = true)
+	int insertRecertificationIfAbsent(UUID id, UUID organizationId, UUID employeeId, UUID trainingId,
+			UUID trainingVersionId, Instant assignedAt, LocalDate assignedDate, LocalDate dueDate,
+			String priority, UUID actor, UUID completionId);
 }

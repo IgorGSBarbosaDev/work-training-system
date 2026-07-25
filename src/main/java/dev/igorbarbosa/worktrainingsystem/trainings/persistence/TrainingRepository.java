@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Lock;
 import jakarta.persistence.LockModeType;
 
 public interface TrainingRepository extends JpaRepository<Training, UUID>, JpaSpecificationExecutor<Training> {
+	long countByOrganizationId(UUID organizationId);
 
 	boolean existsByOrganizationIdAndCodeIgnoreCase(UUID organizationId, String code);
 

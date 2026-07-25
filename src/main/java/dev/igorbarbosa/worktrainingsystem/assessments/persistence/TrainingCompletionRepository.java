@@ -15,12 +15,18 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface TrainingCompletionRepository extends JpaRepository<TrainingCompletion, UUID>,
 		JpaSpecificationExecutor<TrainingCompletion> {
+	long countByOrganizationId(UUID organizationId);
+	@Query(value = "select count(*) from training_completions where organization_id = :organizationId and expiration_date < :date", nativeQuery = true)
+	long countExpired(UUID organizationId, LocalDate date);
+	@Query(value = "select count(*) from training_completions where organization_id = :organizationId and expiration_date >= :date and expiration_date <= :until", nativeQuery = true)
+	long countExpiring(UUID organizationId, LocalDate date, LocalDate until);
 	Optional<TrainingCompletion> findByIdAndOrganizationId(UUID id, UUID organizationId);
 	Optional<TrainingCompletion> findByOrganizationIdAndSourceAssignmentId(UUID organizationId, UUID assignmentId);
 	Optional<TrainingCompletion> findFirstByOrganizationIdAndEmployeeIdAndTrainingIdOrderByCompletedAtDescIdDesc(
 			UUID organizationId, UUID employeeId, UUID trainingId);
 	List<TrainingCompletion> findAllByOrganizationIdAndEmployeeIdAndTrainingIdOrderByCompletedAtDescIdDesc(
 			UUID organizationId, UUID employeeId, UUID trainingId);
+	List<TrainingCompletion> findAllByOrganizationIdAndEmployeeIdOrderByCompletedAtDescIdDesc(UUID organizationId, UUID employeeId);
 
 	@Modifying
 	@Query(value = """

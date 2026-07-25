@@ -22,6 +22,7 @@ import dev.igorbarbosa.worktrainingsystem.qualifications.domain.ActivityQualific
 import dev.igorbarbosa.worktrainingsystem.qualifications.domain.QualificationBlockingType;
 import dev.igorbarbosa.worktrainingsystem.qualifications.domain.QualificationStatus;
 import dev.igorbarbosa.worktrainingsystem.qualifications.persistence.ActivityQualificationRepository;
+import dev.igorbarbosa.worktrainingsystem.notifications.application.SliceBNotificationPort;
 import dev.igorbarbosa.worktrainingsystem.shared.web.error.ResourceNotFoundException;
 import dev.igorbarbosa.worktrainingsystem.trainings.application.TrainingCatalog;
 import java.time.Clock;
@@ -54,14 +55,28 @@ public class QualificationService implements QualificationCommandPort, Qualifica
 	private final AuthorizationService authorization;
 	private final ObjectMapper json;
 	private final Clock clock;
+	private final SliceBNotificationPort notifications;
 
 	public QualificationService(ActivityQualificationRepository qualifications, ActivityOperationsCatalog activities,
 			EmployeeActivityCatalog employees, TrainingCatalog trainings, TrainingCompliancePort compliance,
 			AssignmentStatusPort assignmentStatuses, QualificationSettingsCatalog settings,
-			AuthorizationService authorization, ObjectMapper json, Clock clock) {
+			AuthorizationService authorization, ObjectMapper json, Clock clock, SliceBNotificationPort notifications) {
 		this.qualifications = qualifications; this.activities = activities; this.employees = employees;
 		this.trainings = trainings; this.compliance = compliance; this.assignmentStatuses = assignmentStatuses;
 		this.settings = settings; this.authorization = authorization; this.json = json; this.clock = clock;
+		this.notifications = notifications;
+	}
+
+	/** Compatibility constructor for the Phase 4 unit-test boundary. */
+	public QualificationService(ActivityQualificationRepository qualifications, ActivityOperationsCatalog activities,
+			EmployeeActivityCatalog employees, TrainingCatalog trainings, TrainingCompliancePort compliance,
+			AssignmentStatusPort assignmentStatuses, QualificationSettingsCatalog settings,
+			AuthorizationService authorization, ObjectMapper json, Clock clock) {
+		this(qualifications, activities, employees, trainings, compliance, assignmentStatuses, settings,
+				authorization, json, clock, new SliceBNotificationPort() {
+				@Override public void expirationChanged(ExpirationNotification event) { }
+				@Override public void qualificationBlocked(QualificationBlockedNotification event) { }
+			});
 	}
 
 	@Transactional
@@ -109,6 +124,9 @@ public class QualificationService implements QualificationCommandPort, Qualifica
 		String reasonsJson = write(reasons);
 		qualifications.upsert(UUID.randomUUID(), DEFAULT_ORGANIZATION_ID, employeeId, activityId, status.name(),
 				now, nextExpiration, reasonsJson);
+		if (status == QualificationStatus.BLOCKED)
+			notifications.qualificationBlocked(new SliceBNotificationPort.QualificationBlockedNotification(
+					DEFAULT_ORGANIZATION_ID, employeeId, activityId));
 		ActivityQualification persisted = qualifications.findByOrganizationIdAndEmployeeIdAndActivityId(
 				DEFAULT_ORGANIZATION_ID, employeeId, activityId).orElseThrow();
 		return response(persisted, employee, activity, reasons);

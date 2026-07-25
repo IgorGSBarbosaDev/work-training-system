@@ -90,6 +90,17 @@ services:
       retries: 12
       start_period: 30s
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+
 volumes:
   postgres_data:
   minio_data:

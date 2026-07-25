@@ -26,6 +26,7 @@ public class TrainingAssignment extends BaseEntity {
 	@Column(name = "responsible_user_id", nullable = false, updatable = false) private UUID responsibleUserId;
 	@Column(nullable = false, updatable = false) private boolean recertification;
 	@Column(name = "recertification_of_assignment_id", updatable = false) private UUID recertificationOfAssignmentId;
+	@Column(name = "recertification_of_completion_id", updatable = false) private UUID recertificationOfCompletionId;
 	@Column(name = "cancelled_at") private Instant cancelledAt;
 	@Column(name = "cancelled_by_user_id") private UUID cancelledByUserId;
 	@Column(name = "cancellation_reason", length = 1000) private String cancellationReason;
@@ -107,6 +108,7 @@ public class TrainingAssignment extends BaseEntity {
 	public UUID getResponsibleUserId() { return responsibleUserId; }
 	public boolean isRecertification() { return recertification; }
 	public UUID getRecertificationOfAssignmentId() { return recertificationOfAssignmentId; }
+	public UUID getRecertificationOfCompletionId() { return recertificationOfCompletionId; }
 	public Instant getCancelledAt() { return cancelledAt; }
 	public UUID getCancelledByUserId() { return cancelledByUserId; }
 	public String getCancellationReason() { return cancellationReason; }

@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSpecificationExecutor<Employee> {
+	long countByOrganizationIdAndStatus(UUID organizationId, dev.igorbarbosa.worktrainingsystem.shared.domain.RegistrationStatus status);
 
 	boolean existsByOrganizationIdAndRegistrationIgnoreCase(UUID organizationId, String registration);
 
