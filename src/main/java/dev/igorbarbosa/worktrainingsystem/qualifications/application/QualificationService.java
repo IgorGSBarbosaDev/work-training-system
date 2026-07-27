@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -57,6 +58,7 @@ public class QualificationService implements QualificationCommandPort, Qualifica
 	private final Clock clock;
 	private final SliceBNotificationPort notifications;
 
+	@Autowired
 	public QualificationService(ActivityQualificationRepository qualifications, ActivityOperationsCatalog activities,
 			EmployeeActivityCatalog employees, TrainingCatalog trainings, TrainingCompliancePort compliance,
 			AssignmentStatusPort assignmentStatuses, QualificationSettingsCatalog settings,

@@ -10,6 +10,8 @@ import dev.igorbarbosa.worktrainingsystem.qualifications.api.QualificationRespon
 import dev.igorbarbosa.worktrainingsystem.qualifications.domain.QualificationStatus;
 import dev.igorbarbosa.worktrainingsystem.expirations.application.ExpirationService;
 import dev.igorbarbosa.worktrainingsystem.expirations.api.ExpirationResponse;
+import dev.igorbarbosa.worktrainingsystem.employees.application.EmployeeService;
+import dev.igorbarbosa.worktrainingsystem.employees.api.EmployeeResponse;
 import dev.igorbarbosa.worktrainingsystem.shared.web.pagination.PageResponse;
 import dev.igorbarbosa.worktrainingsystem.shared.web.pagination.PaginationFactory;
 import java.util.Set;
@@ -21,8 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController @RequestMapping("/api/v1") public class ReportingController {
-	private final ReportingService service; private final AssignmentService assignments; private final QualificationService qualifications; private final ExpirationService expirations; private final PaginationFactory pagination;
-	public ReportingController(ReportingService service, AssignmentService assignments, QualificationService qualifications, ExpirationService expirations, PaginationFactory pagination){this.service=service;this.assignments=assignments;this.qualifications=qualifications;this.expirations=expirations;this.pagination=pagination;}
+	private final ReportingService service; private final AssignmentService assignments; private final QualificationService qualifications; private final ExpirationService expirations; private final EmployeeService employees; private final PaginationFactory pagination;
+	public ReportingController(ReportingService service, AssignmentService assignments, QualificationService qualifications, ExpirationService expirations, EmployeeService employees, PaginationFactory pagination){this.service=service;this.assignments=assignments;this.qualifications=qualifications;this.expirations=expirations;this.employees=employees;this.pagination=pagination;}
 	@GetMapping("/me/dashboard") @PreAuthorize("hasRole('EMPLOYEE')") public PersonalDashboardResponse personal(){return service.personal();}
 	@GetMapping("/admin/dashboard/overview") @PreAuthorize("hasRole('ADMIN')") public DashboardOverviewResponse overview(){return service.overview();}
 	@GetMapping("/reports/training-status") @PreAuthorize("hasAnyRole('ADMIN','MANAGER','SUPERVISOR')") public PageResponse<AssignmentResponse> trainingStatus(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size){return PageResponse.from(assignments.list(null,null,null,null,null,null,pagination.create(page,size,"assignedAt,desc",Set.of("assignedAt","dueDate","status"))));}
@@ -32,4 +34,5 @@ import org.springframework.web.bind.annotation.RestController;
 	@GetMapping("/admin/dashboard/activities") @PreAuthorize("hasRole('ADMIN')") public DashboardOverviewResponse activities(){return service.overview();}
 	@GetMapping("/admin/dashboard/employees") @PreAuthorize("hasRole('ADMIN')") public DashboardOverviewResponse employees(){return service.overview();}
 	@GetMapping("/team/dashboard") @PreAuthorize("hasAnyRole('MANAGER','SUPERVISOR')") public DashboardOverviewResponse team(){return service.team();}
+	@GetMapping("/team/employees") @PreAuthorize("hasAnyRole('MANAGER','SUPERVISOR')") public PageResponse<EmployeeResponse> teamEmployees(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size){return PageResponse.from(employees.list(null,null,null,null,null,null,null,pagination.create(page,size,"createdAt,desc",Set.of("createdAt","name","registration","status"))));}
 }

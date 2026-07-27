@@ -31,6 +31,7 @@ import dev.igorbarbosa.worktrainingsystem.identity.application.CurrentUser;
 import dev.igorbarbosa.worktrainingsystem.identity.application.CurrentUserProvider;
 import dev.igorbarbosa.worktrainingsystem.qualifications.application.QualificationCommandPort;
 import dev.igorbarbosa.worktrainingsystem.qualifications.application.TrainingCompliancePort;
+import dev.igorbarbosa.worktrainingsystem.notifications.application.SliceBNotificationPort;
 import dev.igorbarbosa.worktrainingsystem.shared.web.error.BusinessRuleViolationException;
 import dev.igorbarbosa.worktrainingsystem.shared.web.error.ResourceConflictException;
 import dev.igorbarbosa.worktrainingsystem.shared.web.error.ResourceNotFoundException;
@@ -52,6 +53,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,16 +76,31 @@ public class AssignmentService implements AssignmentGenerationPort {
 	private final QualificationCommandPort qualifications;
 	private final AuthorizationService authorization;
 	private final CurrentUserProvider currentUser;
+	private final SliceBNotificationPort notifications;
 
+	@Autowired
+	public AssignmentService(TrainingAssignmentRepository assignments, AssignmentSourceRepository sources,
+			AssignmentBatchRepository batches, AssignmentBatchResultRepository batchResults,
+			EmployeeActivityCatalog employees, ActivityOperationsCatalog activities, TrainingCatalog trainings,
+			TrainingCompliancePort compliance, QualificationCommandPort qualifications,
+			AuthorizationService authorization, CurrentUserProvider currentUser, SliceBNotificationPort notifications) {
+		this.assignments = assignments; this.sources = sources; this.batches = batches;
+		this.batchResults = batchResults; this.employees = employees; this.activities = activities;
+		this.trainings = trainings; this.compliance = compliance; this.qualifications = qualifications;
+		this.authorization = authorization; this.currentUser = currentUser; this.notifications = notifications;
+	}
+
+	/** Compatibility constructor for Docker-independent assignment unit tests. */
 	public AssignmentService(TrainingAssignmentRepository assignments, AssignmentSourceRepository sources,
 			AssignmentBatchRepository batches, AssignmentBatchResultRepository batchResults,
 			EmployeeActivityCatalog employees, ActivityOperationsCatalog activities, TrainingCatalog trainings,
 			TrainingCompliancePort compliance, QualificationCommandPort qualifications,
 			AuthorizationService authorization, CurrentUserProvider currentUser) {
-		this.assignments = assignments; this.sources = sources; this.batches = batches;
-		this.batchResults = batchResults; this.employees = employees; this.activities = activities;
-		this.trainings = trainings; this.compliance = compliance; this.qualifications = qualifications;
-		this.authorization = authorization; this.currentUser = currentUser;
+		this(assignments, sources, batches, batchResults, employees, activities, trainings, compliance, qualifications,
+				authorization, currentUser, new SliceBNotificationPort() {
+				@Override public void expirationChanged(ExpirationNotification event) { }
+				@Override public void qualificationBlocked(QualificationBlockedNotification event) { }
+			});
 	}
 
 	@Transactional
@@ -299,6 +316,8 @@ public class AssignmentService implements AssignmentGenerationPort {
 						() -> existingEffective(employee.id(), trainingId, versionId));
 		else item = existingEffective(employee.id(), trainingId, versionId);
 		sources.insertIfAbsent(UUID.randomUUID(), DEFAULT_ORGANIZATION_ID, item.getId(), origin.name(), sourceId, now);
+		if (inserted == 1) notifications.assignmentCreated(new SliceBNotificationPort.AssignmentNotification(
+				DEFAULT_ORGANIZATION_ID, employee.id(), item.getId(), trainingId));
 		return new CreateOutcome(item, inserted == 1);
 	}
 

@@ -29,6 +29,8 @@ public class EmailDelivery {
 		this.recipient = recipient; this.subject = subject; this.status = Status.PENDING; this.createdAt = now; this.updatedAt = now;
 	}
 	public void retry(Instant now) { status = Status.PENDING; lastError = null; updatedAt = now; }
+	public void sent(Instant now) { status = Status.SENT; attemptCount++; lastError = null; updatedAt = now; }
+	public void failed(String error, Instant now) { status = Status.FAILED; attemptCount++; lastError = error; updatedAt = now; }
 	public UUID getId() { return id; }
 	public UUID getOrganizationId() { return organizationId; }
 	public UUID getUserId() { return userId; }

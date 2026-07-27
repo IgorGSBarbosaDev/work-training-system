@@ -19,6 +19,9 @@ public interface TrainingAssignmentRepository extends JpaRepository<TrainingAssi
 	long countByOrganizationId(UUID organizationId);
 	long countByOrganizationIdAndStatus(UUID organizationId, AssignmentStatus status);
 	long countByOrganizationIdAndEmployeeIdAndStatus(UUID organizationId, UUID employeeId, AssignmentStatus status);
+	long countByOrganizationIdAndEmployeeIdIn(UUID organizationId, Collection<UUID> employeeIds);
+	long countByOrganizationIdAndEmployeeIdInAndStatus(UUID organizationId, Collection<UUID> employeeIds,
+			AssignmentStatus status);
 	Optional<TrainingAssignment> findByIdAndOrganizationId(UUID id, UUID organizationId);
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select assignment from TrainingAssignment assignment where assignment.id = :id and assignment.organizationId = :organizationId")

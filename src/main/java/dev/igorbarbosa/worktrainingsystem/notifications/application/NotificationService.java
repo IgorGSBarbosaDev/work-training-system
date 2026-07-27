@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationService implements SliceBNotificationPort {
 	private final NotificationRepository notifications; private final EmailDeliveryRepository deliveries;
 	private final UserRepository users; private final CurrentUserProvider currentUser; private final Clock clock;
+	private final ApplicationEventPublisher events;
 	public NotificationService(NotificationRepository notifications, EmailDeliveryRepository deliveries, UserRepository users,
-			CurrentUserProvider currentUser, Clock clock) {
-		this.notifications = notifications; this.deliveries = deliveries; this.users = users; this.currentUser = currentUser; this.clock = clock;
+			CurrentUserProvider currentUser, Clock clock, ApplicationEventPublisher events) {
+		this.notifications = notifications; this.deliveries = deliveries; this.users = users; this.currentUser = currentUser; this.clock = clock; this.events = events;
 	}
 	@Transactional(readOnly = true)
 	public Page<Notification> list(Pageable pageable) { var user = currentUser.requireCurrentUser(); return notifications.findAllByOrganizationIdAndUserIdAndArchivedAtIsNull(user.organizationId(), user.userId(), pageable); }
@@ -32,7 +34,7 @@ public class NotificationService implements SliceBNotificationPort {
 	@Transactional public Notification archive(UUID id) { return change(id, false, true); }
 	@Transactional public void readAll() { list(org.springframework.data.domain.Pageable.unpaged()).forEach(n -> n.read(clock.instant())); }
 	@Transactional(readOnly = true) public Page<EmailDelivery> deliveries(Pageable pageable) { requireAdmin(); return deliveries.findAllByOrganizationId(DEFAULT_ORGANIZATION_ID, pageable); }
-	@Transactional public EmailDelivery retryDelivery(UUID id) { requireAdmin(); var d = deliveries.findByIdAndOrganizationId(id, DEFAULT_ORGANIZATION_ID).orElseThrow(() -> new ResourceNotFoundException("A entrega não existe.")); d.retry(clock.instant()); return d; }
+	@Transactional public EmailDelivery retryDelivery(UUID id) { requireAdmin(); var d = deliveries.findByIdAndOrganizationId(id, DEFAULT_ORGANIZATION_ID).orElseThrow(() -> new ResourceNotFoundException("A entrega não existe.")); d.retry(clock.instant()); events.publishEvent(new EmailDeliveryDispatcher.EmailDeliveryQueued(DEFAULT_ORGANIZATION_ID, d.getId(), "Entrega reenfileirada.")); return d; }
 	@Override @Transactional public void expirationChanged(ExpirationNotification event) { create(event.organizationId(), event.employeeId(), "EXPIRATION_" + event.status(), "Treinamento próximo do vencimento", "O treinamento vence em " + event.expirationDate(), "COMPLETION", event.completionId()); }
 	@Override @Transactional public void qualificationBlocked(QualificationBlockedNotification event) { create(event.organizationId(), event.employeeId(), "QUALIFICATION_BLOCKED", "Atividade bloqueada", "Existe uma pendência de treinamento para uma atividade.", "ACTIVITY", event.activityId()); }
 	@Override @Transactional public void assignmentCreated(AssignmentNotification event) { create(event.organizationId(), event.employeeId(), "ASSIGNMENT_CREATED", "Novo treinamento atribuído", "Você recebeu um novo treinamento.", "ASSIGNMENT", event.assignmentId()); }
@@ -42,7 +44,8 @@ public class NotificationService implements SliceBNotificationPort {
 	private void create(UUID organizationId, UUID employeeId, String type, String title, String message, String entityType, UUID entityId) {
 		var user = users.findAllByOrganizationId(organizationId, Pageable.unpaged()).stream().filter(u -> employeeId.equals(u.getEmployeeId())).findFirst().orElse(null);
 		if (user == null) return; Instant now = clock.instant(); var n = notifications.save(new Notification(organizationId, user.getId(), type, title, message, entityType, entityId, now));
-		deliveries.save(new EmailDelivery(organizationId, user.getId(), n.getId(), user.getEmail(), title, now));
+		var delivery = deliveries.save(new EmailDelivery(organizationId, user.getId(), n.getId(), user.getEmail(), title, now));
+		events.publishEvent(new EmailDeliveryDispatcher.EmailDeliveryQueued(organizationId, delivery.getId(), message));
 	}
 	private Notification change(UUID id, boolean read, boolean archive) { var user = currentUser.requireCurrentUser(); var n = notifications.findById(id).filter(v -> v.getOrganizationId().equals(user.organizationId()) && v.getUserId().equals(user.userId())).orElseThrow(() -> new ResourceNotFoundException("A notificação não existe.")); if (read) n.read(clock.instant()); if (archive) n.archive(clock.instant()); return n; }
 	private void requireAdmin() { if (currentUser.requireCurrentUser().role() != dev.igorbarbosa.worktrainingsystem.identity.domain.UserRole.ADMIN) throw new org.springframework.security.access.AccessDeniedException("Acesso restrito ao administrador."); }

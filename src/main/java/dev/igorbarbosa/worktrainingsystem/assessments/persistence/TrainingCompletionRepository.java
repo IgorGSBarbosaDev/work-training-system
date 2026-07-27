@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 import java.util.List;
 import java.util.UUID;
+import java.util.Collection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -20,6 +21,10 @@ public interface TrainingCompletionRepository extends JpaRepository<TrainingComp
 	long countExpired(UUID organizationId, LocalDate date);
 	@Query(value = "select count(*) from training_completions where organization_id = :organizationId and expiration_date >= :date and expiration_date <= :until", nativeQuery = true)
 	long countExpiring(UUID organizationId, LocalDate date, LocalDate until);
+	@Query(value = "select count(*) from training_completions where organization_id = :organizationId and employee_id in (:employeeIds) and expiration_date < :date", nativeQuery = true)
+	long countExpiredForEmployees(UUID organizationId, Collection<UUID> employeeIds, LocalDate date);
+	@Query(value = "select count(*) from training_completions where organization_id = :organizationId and employee_id in (:employeeIds) and expiration_date >= :date and expiration_date <= :until", nativeQuery = true)
+	long countExpiringForEmployees(UUID organizationId, Collection<UUID> employeeIds, LocalDate date, LocalDate until);
 	Optional<TrainingCompletion> findByIdAndOrganizationId(UUID id, UUID organizationId);
 	Optional<TrainingCompletion> findByOrganizationIdAndSourceAssignmentId(UUID organizationId, UUID assignmentId);
 	Optional<TrainingCompletion> findFirstByOrganizationIdAndEmployeeIdAndTrainingIdOrderByCompletedAtDescIdDesc(

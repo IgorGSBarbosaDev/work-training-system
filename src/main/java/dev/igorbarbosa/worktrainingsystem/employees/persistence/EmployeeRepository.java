@@ -5,12 +5,14 @@ import java.util.Optional;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Collection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSpecificationExecutor<Employee> {
 	long countByOrganizationIdAndStatus(UUID organizationId, dev.igorbarbosa.worktrainingsystem.shared.domain.RegistrationStatus status);
+	long countByOrganizationIdAndIdIn(UUID organizationId, Collection<UUID> ids);
 
 	boolean existsByOrganizationIdAndRegistrationIgnoreCase(UUID organizationId, String registration);
 
