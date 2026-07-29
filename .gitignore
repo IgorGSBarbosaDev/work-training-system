@@ -44,3 +44,7 @@ frontend/dist/
 frontend/.vite/
 frontend/coverage/
 frontend/*.tsbuildinfo
+
+### Design handoff sources ###
+/work-training-system-figma-export/
+/work-training-system-figma-export.zip
