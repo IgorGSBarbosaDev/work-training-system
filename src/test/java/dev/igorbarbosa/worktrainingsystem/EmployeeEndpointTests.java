@@ -316,7 +316,8 @@ class EmployeeEndpointTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.previousJobId").value(references.job().getId().toString()))
 				.andExpect(jsonPath("$.currentJobId").value(newJob.getId().toString()))
-				.andExpect(jsonPath("$.derivedActivityEffectsPending").value(true));
+				.andExpect(jsonPath("$.activitiesAdded").value(0))
+				.andExpect(jsonPath("$.assignmentsCreated").value(0));
 
 		mockMvc.perform(get("/api/v1/employees/{employeeId}/history", employee.getId()))
 				.andExpect(status().isOk())

@@ -37,6 +37,14 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
 			and e.status = dev.igorbarbosa.worktrainingsystem.shared.domain.RegistrationStatus.ACTIVE
 			and (e.unitId in :unitIds or e.sectorId in :sectorIds or e.id in :employeeIds)
 			""")
-	List<Employee> findActiveInScope(UUID organizationId, Set<UUID> unitIds, Set<UUID> sectorIds,
+	List<ActiveEmployeeScope> findActiveInScope(UUID organizationId, Set<UUID> unitIds, Set<UUID> sectorIds,
 			Set<UUID> employeeIds);
+
+	interface ActiveEmployeeScope {
+		UUID getId();
+		UUID getOrganizationId();
+		UUID getUnitId();
+		UUID getSectorId();
+		UUID getJobId();
+	}
 }
