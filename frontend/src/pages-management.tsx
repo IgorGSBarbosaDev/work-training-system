@@ -53,6 +53,7 @@ import {
 } from './types'
 import { apiErrorMessage } from './pages-auth'
 import { TrainingVersionEditorPage as TrainingVersionEditorImpl } from './training-editor'
+import { EmployeeActivitiesPanel, EmployeeJobPanel } from './pages-organizational'
 
 export { TrainingVersionEditorImpl as TrainingVersionEditorPage }
 
@@ -170,6 +171,7 @@ export function EmployeeDetailPage({ team = false }: { team?: boolean }) {
             <Info label="Setor" value={employee.data.sector.name} />
             <Info label="Unidade" value={employee.data.unit.name} />
           </dl>
+          {!team && <EmployeeJobPanel employee={employee.data} onChanged={() => { employee.reload(); qualifications.reload() }} />}
         </aside>
         <section className="panel">
           <header className="border-b border-border p-5">
@@ -203,6 +205,11 @@ export function EmployeeDetailPage({ team = false }: { team?: boolean }) {
           )}
         </section>
       </div>
+      <EmployeeActivitiesPanel
+        employeeId={employee.data.id}
+        canManage={!team}
+        onChanged={qualifications.reload}
+      />
     </div>
   )
 }

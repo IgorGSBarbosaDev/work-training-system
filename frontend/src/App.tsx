@@ -25,9 +25,7 @@ import {
   TrainingPlayerPage,
 } from './pages-employee'
 import {
-  ActivitiesPage,
   AssignmentsAdminPage,
-  CreateActivityPage,
   CreateAssignmentPage,
   CreateEmployeePage,
   CreateTrainingPage,
@@ -35,7 +33,6 @@ import {
   EmployeesPage,
   ExpirationsPage,
   GenericManagementPage,
-  OrganizationPage,
   QrVerificationPage,
   QrVerificationResultPage,
   QualificationsManagementPage,
@@ -45,6 +42,12 @@ import {
   TrainingsPage,
   TrainingVersionEditorPage,
 } from './pages-management'
+import {
+  ActivitiesAdminPage,
+  ActivityDetailAdminPage,
+  CreateActivityAdminPage,
+  OrganizationAdminPage,
+} from './pages-organizational'
 
 function ProtectedRoute({ roles, children }: { roles: Role[]; children: ReactNode }) {
   const { session } = useAuth()
@@ -112,9 +115,10 @@ export function App() {
         <Route path="/admin/colaboradores" element={<ProtectedRoute roles={adminRoles}><EmployeesPage /></ProtectedRoute>} />
         <Route path="/admin/colaboradores/novo" element={<ProtectedRoute roles={adminRoles}><CreateEmployeePage /></ProtectedRoute>} />
         <Route path="/admin/colaboradores/:employeeId" element={<ProtectedRoute roles={adminRoles}><EmployeeDetailPage /></ProtectedRoute>} />
-        <Route path="/admin/organizacao" element={<ProtectedRoute roles={adminRoles}><OrganizationPage /></ProtectedRoute>} />
-        <Route path="/admin/atividades" element={<ProtectedRoute roles={adminRoles}><ActivitiesPage /></ProtectedRoute>} />
-        <Route path="/admin/atividades/nova" element={<ProtectedRoute roles={adminRoles}><CreateActivityPage /></ProtectedRoute>} />
+        <Route path="/admin/organizacao" element={<ProtectedRoute roles={adminRoles}><OrganizationAdminPage /></ProtectedRoute>} />
+        <Route path="/admin/atividades" element={<ProtectedRoute roles={adminRoles}><ActivitiesAdminPage /></ProtectedRoute>} />
+        <Route path="/admin/atividades/nova" element={<ProtectedRoute roles={adminRoles}><CreateActivityAdminPage /></ProtectedRoute>} />
+        <Route path="/admin/atividades/:activityId" element={<ProtectedRoute roles={adminRoles}><ActivityDetailAdminPage /></ProtectedRoute>} />
         <Route path="/admin/treinamentos" element={<ProtectedRoute roles={adminRoles}><TrainingsPage /></ProtectedRoute>} />
         <Route path="/admin/treinamentos/novo" element={<ProtectedRoute roles={adminRoles}><CreateTrainingPage /></ProtectedRoute>} />
         <Route path="/admin/treinamentos/:trainingId" element={<ProtectedRoute roles={adminRoles}><TrainingDetailPage /></ProtectedRoute>} />
