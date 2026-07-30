@@ -8,7 +8,10 @@
 
 O projeto já possui uma fundação de backend bastante avançada. Há um monólito modular Spring Boot com Java 21 configurado no Maven, PostgreSQL/Flyway com migrações até `V12`, autenticação JWT, estrutura organizacional, colaboradores, catálogo de treinamentos, atividades, atribuições, progresso de vídeo, avaliações, conclusões, qualificações, expiração/recertificação, certificados, QR Code, notificações e auditoria persistente.
 
-O MVP ainda não está pronto para aceite porque o fluxo completo não está demonstrável pela interface e não está validado em um ambiente compatível. O frontend possui somente uma tela de overview com dados estáticos e telas que apenas exibem o endpoint correspondente. Os testes frontend passam, mas a suíte backend falhou neste ambiente por causa do runtime local (Java 25 e falha de attach do agente do Mockito), não por uma falha funcional isolada identificada.
+O MVP ainda não está pronto para aceite porque o fluxo completo não está demonstrável pela interface. A prioridade 2
+agora possui telas administrativas funcionais para estrutura organizacional, atividades e relações com colaboradores,
+mas o caminho de aprendizagem e várias áreas de operação ainda são placeholders. A validação local usa Docker e o
+runtime disponível; o aceite final ainda exige execução oficial com Java 21 e smoke test autenticado no navegador.
 
 ## Estado atual observado
 
@@ -27,26 +30,36 @@ O MVP ainda não está pronto para aceite porque o fluxo completo não está dem
 - Dashboards e relatórios básicos no backend.
 - Docker Compose com PostgreSQL, MinIO, backend e frontend; workflow de CI para backend, frontend e validação do Compose.
 
-### Frontend — ainda é um protótipo de navegação
+### Frontend — prioridade 2 funcional, demais áreas ainda protótipo
 
 O frontend em `frontend/src/App.tsx` já permite login real contra a API, uma sessão demo e navegação por perfil. Porém:
 
 - o overview usa números e eventos hard-coded;
-- as demais telas (`Assignments`, `Qualifications`, `Certificates`, `QR verification`, `Notifications`, `Reports`, `Team insights` e `Audit trail`) são placeholders que apenas fazem um `GET` e mostram “live data loaded”;
-- não há formulários para administrar colaboradores, estrutura, atividades, treinamentos, conteúdo, atribuições ou usuários;
+- as telas de `Assignments`, `Qualifications`, `Certificates`, `QR verification`, `Notifications`, `Reports`, `Team insights` e `Audit trail` ainda são placeholders que apenas fazem um `GET` e mostram “live data loaded”;
+- a prioridade 2 adicionou formulários reais para unidades, setores, cargos, atividades, vínculos de cargo, requisitos obrigatórios e atividades específicas de colaboradores; ainda faltam formulários equivalentes para treinamentos, conteúdo, atribuições em lote e usuários;
 - não há player de vídeo, retomada de progresso, fluxo de questionário, submissão de avaliação ou tela de conclusão;
 - não há telas funcionais para certificados, QR Code, notificações, expiração, qualificações ou auditoria;
-- não há tratamento de paginação, filtros, estados vazios, erros de domínio e permissões na experiência de usuário;
+- as telas da prioridade 2 processam paginação e filtros no backend e tratam carregamento, vazio, erro e permissões básicas; as demais telas ainda não oferecem essa experiência completa;
 - os dados visuais de demonstração (`Northstar`, `Atlas Manufacturing`, Marina e indicadores fictícios) não estão conectados ao backend.
+
+### Entrega verificada da prioridade 2 — 29/07/2026
+
+- Backend: relações organizacionais, atividades, requisitos, atribuições, qualificações e mudança de cargo foram
+  exercitados contra PostgreSQL real em Testcontainers, sem apagar históricos.
+- Frontend: `/admin/organizacao`, `/admin/atividades`, detalhe de atividade e painéis de colaborador usam os contratos
+  existentes; o editor de treinamentos, upload, questionários e publicação não foram alterados.
+- Testes locais verdes: lint, type-check, 5 testes frontend, build frontend e teste de endpoint da prioridade 2.
+- Pendências reais: suíte completa com Java 21, smoke test de navegador autenticado/CORS e implementação das demais
+  áreas frontend do MVP.
 
 ## O que falta para alcançar o MVP
 
 ### 1. Corrigir a base de execução e tornar a suíte confiável — bloqueador de aceite
 
-- Executar o projeto com Java 21, conforme `pom.xml` e `AGENTS.md`.
-- Reexecutar `./mvnw test` com Java 21 e Docker disponível para validar os testes de integração/Testcontainers e as migrações `V1`–`V12`.
-- Resolver a configuração de agente do Mockito ou atualizar a configuração de testes caso a suíte continue sendo executada em JDKs mais novos.
-- Registrar uma execução verde de `./mvnw test`, `./mvnw -DskipTests package`, `npm test`, `npm run build` e `docker compose config --quiet`.
+- Executar o projeto com Java 21, conforme `pom.xml` e `AGENTS.md`; Java 21 não está instalado neste ambiente (a execução local usa Java 25 com `release 21`).
+- [x] Reexecutar `./mvnw test` com Docker disponível: 148 testes passaram e as migrações `V1`–`V12` foram validadas no PostgreSQL 17 do Testcontainers.
+- [ ] Repetir a suíte com Java 21 e avaliar a configuração do agente do Mockito; em Java 25 há somente os avisos de auto-attach, sem falhas.
+- [x] Registrar execuções verdes de `./mvnw test`, `./mvnw -DskipTests package`, `npm test`, `npm run build` e `docker compose config --quiet`.
 - Fazer um smoke test real no Compose: login, cadastro, atribuição, execução, conclusão, certificado, QR, notificação e auditoria.
 
 ### 2. Substituir o protótipo frontend por fluxos funcionais — maior lacuna
