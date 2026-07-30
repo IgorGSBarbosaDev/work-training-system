@@ -49,6 +49,7 @@ import {
   Training,
 } from './types'
 import { apiErrorMessage } from './pages-auth'
+import { EmployeeActivitiesPanel, EmployeeJobPanel } from './pages-organizational'
 
 type CatalogItem = { id: string; name: string; code?: string; status: string; description?: string }
 type Unit = CatalogItem
@@ -164,6 +165,7 @@ export function EmployeeDetailPage({ team = false }: { team?: boolean }) {
             <Info label="Setor" value={employee.data.sector.name} />
             <Info label="Unidade" value={employee.data.unit.name} />
           </dl>
+          {!team && <EmployeeJobPanel employee={employee.data} onChanged={() => { employee.reload(); qualifications.reload() }} />}
         </aside>
         <section className="panel">
           <header className="border-b border-border p-5">
@@ -197,6 +199,11 @@ export function EmployeeDetailPage({ team = false }: { team?: boolean }) {
           )}
         </section>
       </div>
+      <EmployeeActivitiesPanel
+        employeeId={employee.data.id}
+        canManage={!team}
+        onChanged={qualifications.reload}
+      />
     </div>
   )
 }
