@@ -52,7 +52,7 @@ As migrações `V1` a `V4`, regras de domínio e requisitos oficiais não foram 
 - [x] Listagens e detalhes organizacionais filtrados no banco pelos grants ativos UNIT/SECTOR/EMPLOYEE de gestores e supervisores.
 - [x] Validação dos alvos de grants por portas públicas de aplicação, sem acesso cruzado a repositórios.
 - [x] Limitação de login para contas conhecidas e desconhecidas usando hash do e-mail e janela configurável em `login_attempt_states`.
-- [ ] Efeitos de atividades, atribuições e qualificações após mudança de cargo pertencem à Fase 3 e são sinalizados como pendentes.
+- [x] Efeitos de atividades, atribuições e qualificações após mudança de cargo foram concluídos na Fase 3, preservando históricos e permitindo remoção opcional apenas das atividades de origem `JOB`.
 - [ ] Auditoria administrativa persistente de identidade pertence à Fase 5; `EmployeeHistory` já é persistido nesta fase.
 
 ## Fase 3 - slice A: atividades e integridade do catálogo
@@ -61,11 +61,11 @@ As migrações `V1` a `V4`, regras de domínio e requisitos oficiais não foram 
 - [x] Isolamento organizacional por chaves compostas e unicidade parcial para impedir vínculos ativos duplicados.
 - [x] CRUD paginado de atividades, requisitos e relações de cargo/colaborador com escopo de gestor aplicado nas consultas.
 - [x] Origem efetiva sem duplicação (`JOB`/`MANUAL`) e remoção lógica que preserva vínculos e treinamentos históricos.
-- [x] Propagação para colaboradores ativos e eventos after-commit para atribuições e recálculo; consumidores desta fase são no-op explícito.
+- [x] Propagação para colaboradores ativos e eventos after-commit transacionais para geração idempotente de atribuições e recálculo de qualificações.
 - [x] Porta pública `TrainingCatalog` para validação de treinamento ativo, versão publicada e resolução da publicação vigente.
 - [x] Nota mínima de 70%, resposta correta ativa única, vídeo obrigatório, publicação segura e snapshots imutáveis de metadados/conteúdo.
 - [x] Duplicação de versão, resumo de conteúdo, reordenação em lote e endpoints dedicados de status/exclusão de conteúdo em rascunho.
-- [ ] Persistência de atribuições, qualificações e `/activities/{id}/qualified-employees` pertence ao slice B; nenhum resultado fictício é retornado.
+- [x] Persistência de atribuições, qualificações e `/activities/{id}/qualified-employees` foi entregue no slice B; nenhum resultado fictício é retornado.
 
 ## Fase 3 - slice B: atribuições e qualificações operacionais
 
@@ -82,6 +82,21 @@ As migrações `V1` a `V4`, regras de domínio e requisitos oficiais não foram 
 - [x] Testes unitários cobrem origens, inatividade, escopo, idempotência/concorrência, lotes, transições e os quatro estados de qualificação; teste de endpoints com Testcontainers valida o contrato e a migração quando Docker está disponível.
 - [x] Progresso real passa ao slice A da Fase 4; tentativas e conclusões permanecem para o slice B e substituirão o
   adaptador conservador de conformidade.
+
+## Prioridade 2 — estrutura organizacional e relações (29/07/2026)
+
+- [x] Interface administrativa funcional para unidades, setores, cargos e atividades, com criação, edição, status,
+  busca, paginação, estados de carregamento, vazio e erro.
+- [x] Relações `cargo → atividade padrão → treinamento obrigatório` administráveis pela API existente, com remoção
+  lógica e preservação de históricos.
+- [x] Interface de colaborador para mudança de cargo, atividades específicas e distinção visual entre origens `JOB` e
+  `MANUAL`, sem apagar atividades padrão ou históricos de treinamento.
+- [x] Eventos pós-commit abrem nova transação para que atribuições e qualificações sejam persistidas de fato no
+  PostgreSQL; conclusão de treinamento também dispara recálculo transacional.
+- [x] Teste de endpoint com Testcontainers cobre o fluxo de relações, mudança de cargo, atribuições, remoção
+  específica, conclusão manual e estados `BLOCKED`, `EXPIRING`, `AVAILABLE` e `NOT_ASSIGNED`.
+- [ ] Smoke test de navegador autenticado com CORS e execução em Java 21 permanece pendente; os testes frontend
+  atuais validam contratos/helpers, não substituem esse aceite visual ponta a ponta.
 
 ## Fase 4 - slice A: arquivos, execução e prontidão de conteúdo
 

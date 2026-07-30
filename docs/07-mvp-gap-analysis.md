@@ -1,120 +1,78 @@
 # Diagnóstico do caminho até o MVP
 
-**Data do diagnóstico:** 29/07/2026
-**Base analisada:** árvore atual do repositório, `pom.xml`, `src/`, `frontend/`, Docker Compose, contratos e documentos em `docs`.
-**Referências:** [PRD do MVP](01-prd-mvp.md), [fonte da verdade](../work-training-system-fonte-da-verdade.md), [auditoria de implementação](06-implementation-audit.md) e [contrato da API](05-api-contract.md).
+**Data do diagnóstico:** 24/08/2026  
+**Base analisada:** árvore atual do repositório, `pom.xml`, `src/`, `frontend/`, Docker Compose, CI, contratos e documentos em `docs/`.  
+**Referências:** [PRD do MVP](01-prd-mvp.md), [fonte da verdade](../work-training-system-fonte-da-verdade.md), [auditoria de implementação](06-implementation-audit.md), [contrato da API](05-api-contract.md) e [aceite técnico](09-technical-acceptance.md).
 
 ## Resumo executivo
 
-A prioridade 1 do MVP — editor administrativo de treinamentos — está implementada nesta branch. O backend preserva a imutabilidade de versões publicadas, restringe mutações administrativas a rascunhos, valida consistência antes da publicação e usa uploads privados no MinIO com URLs presignadas. O frontend agora oferece o fluxo operacional de edição de treinamento, versão, módulos, vídeos, questionários, questões e alternativas.
+O projeto possui uma fundação de backend avançada em um monólito modular Spring Boot. A prioridade 1 — editor administrativo de treinamentos — e a prioridade 2 — relações organizacionais — estão integradas nesta linha de trabalho. O backend preserva versões publicadas, aplica regras de escopo e autorização, e mantém histórico de atribuições, conclusões, qualificações e auditoria.
 
-O MVP ainda não está pronto para aceite porque o fluxo completo precisa de execução integrada comprovada em Java 21 + Docker. O frontend atual já possui autenticação real, roteamento por perfil, dashboards API-backed, atribuições, player, questionários, certificados, QR Code, notificações e páginas administrativas, mas a profundidade de alguns fluxos e o aceite ponta a ponta ainda precisam ser confirmados pelo CI. A suíte backend observada anteriormente ficou limitada pelo runtime local (Java 25 e Docker indisponível); esse fato não deve ser confundido com um resultado verde.
-O restante do MVP ainda não deve ser considerado concluído: as telas de execução do colaborador, dashboards completos, certificados, notificações, expirações, QR Code e auditoria ainda possuem lacunas de produto na interface. O Compose agora inclui Mailpit para o ambiente local, mas o aceite completo e a cobertura de falhas SMTP ainda dependem de execução integrada.
+O MVP ainda não deve ser declarado aceito. O código para o fluxo integrado está versionado, mas a matriz de aceite ainda precisa ser executada com o toolchain oficial e os fluxos de produto precisam ser conferidos com dados de demonstração. O maior risco restante é profundidade operacional e evidência ponta a ponta, não a ausência da fundação de domínio.
 
 ## Estado atual observado
 
-### Backend — base existente e prioridade 1 concluída
+### Backend
 
 - Identidade, login, refresh, logout, recuperação de senha, usuários, papéis, permissões e escopos.
-- Unidades, setores, cargos, colaboradores, status, histórico e foto protegida em object storage.
-- Atividades, requisitos de treinamento e vínculos com cargos/colaboradores.
-- Treinamentos versionados com edição dos dados principais, criação/duplicação de versões, publicação e arquivamento compatível com o modelo atual.
-- Módulos com criação, edição, remoção, status e ordenação; vídeos com criação, edição, remoção, status, ordenação e listagem por módulo.
-- Questionários opcionais com criação, edição, remoção, status e parâmetros de nota mínima, tentativas e intervalo.
-- Questões e alternativas com criação, edição, remoção, status e ordenação; a regra de uma única alternativa correta ativa é validada no serviço.
-- Resumo de publicação com validação de módulo ativo, vídeo obrigatório, questionário não vazio, alternativas suficientes, única resposta correta, ordens únicas e parâmetros válidos.
-- Upload privado de vídeos para MinIO via URL presignada, confirmação server-side por `HEAD` de tipo/tamanho/checksum e URL curta protegida para playback.
-- Imutabilidade de conteúdo publicado e preservação da versão exata usada por atribuições/conclusões.
-- Atribuição, progresso de vídeo, avaliações, conclusões, qualificações, expiração/recertificação, certificados, QR Code, notificações, auditoria e reporting continuam disponíveis conforme a base existente.
+- Unidades, setores, cargos, colaboradores, status, histórico e fotos protegidas em object storage.
+- Relação `cargo -> atividades padrão -> treinamentos obrigatórios`, além de atividades manuais por colaborador.
+- Propagação de mudança de cargo, atribuições automáticas, qualificações e distinção de origens `JOB` e `MANUAL`.
+- Treinamentos versionados, módulos, vídeos, questionários, questões, alternativas, publicação e imutabilidade de versões publicadas.
+- Upload privado de vídeos via MinIO, confirmação server-side e playback protegido por URL presignada.
+- Atribuições individuais e em lote, progresso de vídeo, avaliações, conclusões, validade, vencimento, recertificação e bloqueio/liberação de atividades.
+- Certificados internos/externos, PDF, download, validação e revogação.
+- QR Code com geração, revogação, verificação autenticada e registro de acesso.
+- Notificações internas, entregas de e-mail, reenvio e auditoria persistente.
+- Migrações Flyway `V1` a `V12`, Compose com PostgreSQL/MinIO/Mailpit e workflow de CI.
 
-### Frontend — integrado, com profundidade ainda a comprovar
+### Frontend
 
-O frontend em `frontend/src/App.tsx` permite login real contra a API, sessão persistida e redirecionamento por perfil. Há telas e integrações para dashboard administrativo e do colaborador, atribuições, player com progresso, questionário, resultado, certificados, QR Code, notificações, relatórios, gestão de colaboradores, treinamentos e auditoria. O Playwright adicionado ao aceite valida os caminhos de login, escopo e superfícies críticas sem depender de dados visuais hard-coded.
+O frontend em `frontend/src/App.tsx` usa a API real, sessão persistida e navegação por perfil. Existem fluxos para login, dashboard pessoal e operacional, atribuições, player, questionários, resultados, certificados, QR Code, notificações, colaboradores, atividades, treinamentos, editor de conteúdo, relações organizacionais e auditoria.
 
-Ainda devem ser comprovados no aceite integrado, e aprofundados quando houver requisito funcional específico:
+A entrega de relações organizacionais acrescenta telas funcionais para unidades, setores, cargos, vínculos de cargo, requisitos de treinamento e atividades específicas de colaboradores. O editor administrativo mantém as operações de versões, módulos, vídeos, questionários, questões e alternativas.
 
-- cobertura visual e comportamental de todos os estados vazios, erros de domínio, paginação, filtros e expiração de sessão;
-- formulários e operações administrativas menos exercitadas pelo smoke, incluindo atividades, usuários, versões e edição de conteúdo;
-- reprodução real do arquivo de vídeo em navegador, além da validação de URL protegida e do registro de progresso pela API;
-- execução de falha SMTP controlada para obter evidência real do caminho de retry;
-- confirmação dos relatórios e dashboards específicos contra dados de produção de demonstração, não apenas a resposta HTTP.
-### Frontend — prioridade 1 funcional
+Ainda precisam de comprovação integrada ou aprofundamento conforme o aceite:
 
-- Catálogo administrativo com busca, criação de treinamento e edição dos dados principais.
-- Histórico de versões com duplicação de versão publicada/arquivada para novo rascunho, publicação e arquivamento.
-- Editor de versão com parâmetros, resumo de publicação, erros de consistência, estados de carregamento/erro/vazio e bloqueio visual de versões publicadas.
-- Editor de módulos com edição, remoção, status e reordenação.
-- Editor de vídeos com upload direto para MinIO sem carregar o arquivo completo na API, edição, remoção, status, reordenação e teste de URL de playback protegida.
-- Editor de questionários, questões e alternativas com edição, remoção, ativação/inativação, reordenação e definição exclusiva da resposta correta.
-- Validações de campos no frontend complementadas pelas regras e autorização administrativa no backend.
-- Interface responsiva reutilizando os componentes e tokens do design system atual.
+- estados de erro, vazio, paginação, filtros e expiração de sessão em todos os fluxos;
+- operações administrativas menos exercitadas pelo smoke;
+- reprodução de um arquivo de vídeo real no navegador;
+- dashboards e relatórios específicos contra dados de demonstração;
+- telas operacionais de usuários, certificados, notificações, e-mails e auditoria com ações e filtros completos.
 
-### Infraestrutura e evidência de smoke
+## O que falta para alcançar o MVP
 
-- `docker-compose.yml` mantém PostgreSQL, MinIO, backend e frontend; CORS do backend e da API do MinIO inclui as portas locais do frontend (`5173` e `3000`).
-- O bootstrap opcional de administrador demo é configurável por variáveis do Compose e permanece desativado por padrão.
-- O MinIO comunitário é configurado por `MINIO_API_CORS_ALLOW_ORIGIN`; o init não tenta usar `mc cors set`, operação não disponível nessa distribuição.
-- Smoke executado com o Compose: login administrativo pelo navegador, criação do treinamento, módulo, questionário, questão, duas alternativas, escolha de uma resposta correta, upload/conclusão de vídeo, criação de vídeo, publicação e criação de nova versão.
-- O objeto sem URL presignada respondeu `403`; a URL protegida de playback respondeu `200`; alteração da versão publicada respondeu `422` por imutabilidade.
-- Nenhuma migration nova foi necessária para a prioridade 1; os contratos existentes e as tabelas atuais suportam o editor.
+### Produto
 
-## Gaps reais restantes
+- Implementar DTOs e consultas específicas para os dashboards por treinamento, atividade e colaborador. Atualmente esses endpoints ainda delegam para o mesmo overview geral.
+- Aprofundar filtros, paginação, ações, estados vazios e mensagens de domínio nas áreas administrativas.
+- Confirmar no navegador o caminho completo do colaborador: atribuição, retomada, vídeo, questionário, conclusão e certificado.
+- Confirmar que todos os eventos relevantes geram auditoria e notificações internas/e-mail conforme a fonte da verdade.
+- Usar dados fictícios consistentes para demonstrar os estados pendente, em andamento, concluído, reprovado, vencido, vencendo e bloqueado.
 
-### Produto fora da prioridade 1
+### Ambiente e aceite
 
-- Dashboard administrativo ainda precisa de indicadores e filtros completos por treinamento, atividade e colaborador.
-- Ainda faltam na interface os fluxos completos do colaborador: atribuição, player com progresso, retomada, questionário, conclusão e certificado.
-- Ainda faltam telas operacionais completas para colaboradores, estrutura, atividades, atribuições, usuários, qualificações, expirações, certificados, QR Code, notificações, e-mails e auditoria.
-- O frontend ainda precisa substituir placeholders desses módulos por fluxos reais e adicionar testes de interação mais amplos.
+- Executar `./mvnw -B -ntp verify` com Java 21 e versões posteriores suportadas.
+- Executar `npm ci`, testes, lint, build e Playwright com Node 22 no CI.
+- Subir Compose, executar seed idempotente, smoke API, Mailpit e browser acceptance.
+- Validar upload e reprodução de um vídeo real, além de certificado, QR Code, notificações, e-mail e auditoria.
+- Atualizar a matriz de [docs/09-technical-acceptance.md](09-technical-acceptance.md) com artefatos reais antes de declarar o MVP concluído.
 
-### Ambiente e aceite de produto
+### Operação e segurança
 
-- A exigência estrita de Java 21 foi implementada no Maven, Dockerfile, CI e scripts de pré-requisito.
-- Ainda é necessário executar `./mvnw -B -ntp verify` com Java 21 e Docker disponível para validar Testcontainers e as migrações `V1`–`V12`.
-- A execução local comprovada de frontend e `docker compose config --quiet` está verde; a execução integrada e os artefatos de CI ainda precisam ser registrados.
-- O smoke test real agora está versionado em `scripts/acceptance/smoke.mjs`.
-- O Compose inclui Mailpit; e-mail, retries e falhas de entrega ainda precisam de evidência completa em ambiente integrado.
-- O smoke de MinIO validou metadados, privacidade e acesso assinado com um payload mínimo; a validação de decodificação/streaming de um vídeo real permanece dependente de um arquivo de mídia válido e de browser com suporte ao codec.
-- O aceite completo do MVP exige executar os 26 critérios da fonte da verdade, incluindo os fluxos de execução e operação que não fazem parte desta prioridade.
+- Revisar o uso de organização padrão nos módulos recentes antes de uma demonstração multi-organização ou produção.
+- Confirmar retry de e-mail em falha SMTP controlada, sem considerar a ausência de falha em Mailpit saudável como evidência de retry.
 
-### Lacunas de backend e operação
+## Validação registrada
 
-- Separar os endpoints de dashboard administrativo por treinamento, atividade e colaborador; atualmente os endpoints correspondentes retornam o mesmo overview geral em `ReportingController`.
-- Confirmar que todos os eventos relevantes geram auditoria persistente, não somente operações de certificado, QR e recertificação.
-- Confirmar o disparo de notificações internas e e-mail para atribuição, prazo próximo, vencimento, reprovação, conclusão e mudança de qualificação.
-- Mailpit foi incluído no Compose e o seed/smoke validam a entrega SMTP local; falta apenas uma execução com falha SMTP controlada para evidenciar o retry sem condição de corrida.
-- O seed idempotente via API cria dados fictícios, usuários reais para os três perfis, fixture de vídeo no MinIO, atribuição individual e regra automática por atividade/cargo.
-- Revisar escopo multi-organização e valores default usados nos módulos recentes antes de considerar produção/demonstração final.
-
-## Validação da prioridade 1
-
-Validação executada nesta branch:
-
-- `frontend`: `npm run lint`, `npm run type-check`, `npm test` — 4 testes aprovados — e `npm run build`.
-- backend: `./mvnw test` — 146 testes aprovados — e `./mvnw -DskipTests package`.
-- containers: `docker compose config --quiet` e `docker compose build`.
-- runtime: suíte Testcontainers executada com Docker e migrations `V1`–`V12` validadas; imagens de backend/frontend construídas com Java 21/Node 22.
-- smoke manual: browser autenticado, criação do catálogo e conteúdo, upload/conclusão MinIO, objeto privado `403`, playback presignado `200`, publicação, duplicação e bloqueio de alteração publicada `422`.
-
-- Playwright foi adicionado para login, dashboards, escopo, player, questionário, certificado e QR; a execução depende do Compose saudável e Chromium.
-- O smoke valida permissões, idempotência, PostgreSQL, MinIO, certificado, QR, notificação, Mailpit e auditoria pela API.
-- Permanecem como comprovação de aceite a execução em máquina/runner com Java 21 + Docker e a atualização dos resultados da matriz em `docs/09-technical-acceptance.md`.
-- Os critérios de conclusão do MVP devem ser marcados com os artefatos do CI, não com aprovação manual não registrada.
+- A prioridade 2 foi desenvolvida com testes de relações organizacionais, propagação de efeitos e persistência de auditoria.
+- A prioridade 1 registrou validação de frontend, backend, migrations, Compose, MinIO, publicação e imutabilidade.
+- A validação final continua dependente de uma execução oficial com Java 21, Node 22 e Docker, seguida da atualização da matriz de aceite.
 
 ## Ordem recomendada
 
-1. Executar o aceite completo em Java 21, Node 22 e Docker e publicar os artefatos.
-2. Corrigir apenas falhas reais encontradas no smoke, no navegador ou no CI.
-3. Aprofundar os fluxos de produto que ainda exigirem formulários, filtros, estados vazios ou regras não cobertas.
-4. Completar cobertura de falha SMTP/retry e contratos de relatórios específicos.
-5. Atualizar a matriz de aceite e só então declarar o MVP concluído.
-
-## Atualização de 22/08/2026 — fechamento do aceite técnico e ambiente
-
-Foi implementada a base reproduzível de aceite descrita em [09-technical-acceptance.md](09-technical-acceptance.md): Java 21 estrito no Maven, imagens fixadas, Compose com PostgreSQL, MinIO, backend, frontend e Mailpit, `.env.example`, healthchecks, scripts multiplataforma de pré-requisito, seed fictício via API, smoke test, Playwright e job de aceite no CI com coleta de artefatos.
-
-O diagnóstico funcional de frontend acima permanece válido como retrato histórico do diagnóstico de 27/07/2026 e não deve ser usado para declarar o estado atual sem conferir o código. A aceitação técnica ainda não foi aprovada neste worktree porque a máquina local está em Java 25 e não possui daemon Docker disponível; os critérios de runtime precisam ser executados no CI ou em uma máquina com Java 21, Node 22 e Docker.
-
-## Conclusão
-
-O estado atual é **prioridade 1 do editor administrativo implementada e validada; MVP completo ainda não aceito**. A versão publicada permanece protegida contra alterações, o histórico fica preservado e os gaps restantes são de execução do colaborador, operação administrativa além do editor e infraestrutura de demonstração, não lacunas ocultas do editor de treinamentos.
+1. Finalizar a compatibilidade Java 21+ e executar o CI completo.
+2. Gerar dados fictícios reproduzíveis e executar seed/smoke/browser com esses dados.
+3. Corrigir somente falhas reais encontradas na execução integrada.
+4. Implementar dashboards específicos e aprofundar as telas operacionais restantes.
+5. Atualizar a matriz de aceite e declarar o MVP concluído somente com evidência completa.
