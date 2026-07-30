@@ -235,6 +235,7 @@ public class TrainingCatalogService implements TrainingCatalog, TrainingExecutio
 	@Transactional
 	public ModuleResponse createModule(UUID versionId, ModuleRequest request) {
 		TrainingVersion version = draftVersion(versionId);
+		ensureModuleOrder(version.getId(), request.order(), null);
 		return ModuleResponse.from(moduleRepository.saveAndFlush(new TrainingModule(version.getId(), request.title().trim(),
 				trim(request.description()), request.order(), request.status())));
 	}
@@ -250,6 +251,7 @@ public class TrainingCatalogService implements TrainingCatalog, TrainingExecutio
 	public ModuleResponse updateModule(UUID moduleId, ModuleRequest request) {
 		TrainingModule module = findModule(moduleId);
 		draftVersion(module.getTrainingVersionId());
+		ensureModuleOrder(module.getTrainingVersionId(), request.order(), moduleId);
 		module.update(request.title().trim(), trim(request.description()), request.order());
 		module.changeStatus(request.status());
 		return ModuleResponse.from(module);
@@ -260,10 +262,33 @@ public class TrainingCatalogService implements TrainingCatalog, TrainingExecutio
 		return ModuleResponse.from(findModule(moduleId));
 	}
 
+	@Transactional(readOnly = true)
+	public List<VideoResponse> listVideos(UUID moduleId) {
+		findModule(moduleId);
+		return videoRepository.findAllByModuleIdOrderByDisplayOrder(moduleId).stream()
+				.map(VideoResponse::from).toList();
+	}
+
+	@Transactional
+	public void deleteModule(UUID moduleId) {
+		TrainingModule module = findModule(moduleId);
+		draftVersion(module.getTrainingVersionId());
+		videoRepository.deleteAll(videoRepository.findAllByModuleIdOrderByDisplayOrder(moduleId));
+		questionnaireRepository.findByModuleId(moduleId).ifPresent(questionnaire -> {
+			for (Question question : questionRepository.findAllByQuestionnaireIdOrderByDisplayOrder(questionnaire.getId())) {
+				answerOptionRepository.deleteAll(answerOptionRepository.findAllByQuestionIdOrderByDisplayOrder(question.getId()));
+			}
+			questionRepository.deleteAll(questionRepository.findAllByQuestionnaireIdOrderByDisplayOrder(questionnaire.getId()));
+			questionnaireRepository.delete(questionnaire);
+		});
+		moduleRepository.delete(module);
+	}
+
 	@Transactional
 	public VideoResponse createVideo(UUID moduleId, VideoRequest request) {
 		TrainingModule module = findModule(moduleId);
 		draftVersion(module.getTrainingVersionId());
+		ensureVideoOrder(moduleId, request.order(), null);
 		var file = requireVideoFile(request.fileId(), request.storageObjectKey());
 		return VideoResponse.from(videoRepository.saveAndFlush(new Video(moduleId, request.title().trim(),
 				trim(request.description()), request.order(), request.durationSeconds(), file.id(), file.objectKey(),
@@ -279,11 +304,25 @@ public class TrainingCatalogService implements TrainingCatalog, TrainingExecutio
 	public VideoResponse updateVideo(UUID videoId, VideoRequest request) {
 		Video video = findVideo(videoId);
 		draftVersion(findModule(video.getModuleId()).getTrainingVersionId());
+		ensureVideoOrder(video.getModuleId(), request.order(), videoId);
 		var file = requireVideoFile(request.fileId(), request.storageObjectKey());
 		video.update(request.title().trim(), trim(request.description()), request.order(), request.durationSeconds(),
 				file.id(), file.objectKey(), request.required());
 		video.changeStatus(request.status());
 		return VideoResponse.from(video);
+	}
+
+	@Transactional
+	public void deleteVideo(UUID videoId) {
+		Video video = findVideo(videoId);
+		draftVersion(findModule(video.getModuleId()).getTrainingVersionId());
+		videoRepository.delete(video);
+	}
+
+	@Transactional(readOnly = true)
+	public java.util.Optional<QuestionnaireResponse> findQuestionnaireByModule(UUID moduleId) {
+		findModule(moduleId);
+		return questionnaireRepository.findByModuleId(moduleId).map(QuestionnaireResponse::from);
 	}
 
 	@Transactional
@@ -318,6 +357,7 @@ public class TrainingCatalogService implements TrainingCatalog, TrainingExecutio
 	@Transactional
 	public QuestionResponse createQuestion(UUID questionnaireId, QuestionRequest request) {
 		findQuestionnaireInDraft(questionnaireId);
+		ensureQuestionOrder(questionnaireId, request.order(), null);
 		return QuestionResponse.from(questionRepository.saveAndFlush(new Question(questionnaireId, request.statement().trim(),
 				request.order(), request.status())));
 	}
@@ -326,6 +366,7 @@ public class TrainingCatalogService implements TrainingCatalog, TrainingExecutio
 	public AnswerOptionResponse createAnswerOption(UUID questionId, AnswerOptionRequest request) {
 		Question question = findQuestion(questionId);
 		findQuestionnaireInDraft(question.getQuestionnaireId());
+		ensureOptionOrder(questionId, request.order(), null);
 		if (request.correct() && answerOptionRepository.countByQuestionIdAndStatusAndCorrect(questionId,
 				RegistrationStatus.ACTIVE, true) > 0 && request.status() == RegistrationStatus.ACTIVE) {
 			throw rule("MULTIPLE_CORRECT_ANSWERS", "Cada questão deve possuir uma única alternativa correta.");
@@ -345,6 +386,7 @@ public class TrainingCatalogService implements TrainingCatalog, TrainingExecutio
 	public QuestionResponse updateQuestion(UUID questionId, QuestionRequest request) {
 		Question question = findQuestion(questionId);
 		findQuestionnaireInDraft(question.getQuestionnaireId());
+		ensureQuestionOrder(question.getQuestionnaireId(), request.order(), questionId);
 		question.update(request.statement().trim(), request.order());
 		question.changeStatus(request.status());
 		return QuestionResponse.from(question);
@@ -367,6 +409,7 @@ public class TrainingCatalogService implements TrainingCatalog, TrainingExecutio
 		AnswerOption option = answerOptionRepository.findById(optionId)
 				.orElseThrow(() -> new ResourceNotFoundException("A alternativa informada não existe."));
 		findQuestionnaireInDraft(findQuestion(option.getQuestionId()).getQuestionnaireId());
+		ensureOptionOrder(option.getQuestionId(), request.order(), optionId);
 		if (request.correct() && request.status() == RegistrationStatus.ACTIVE
 				&& answerOptionRepository.countByQuestionIdAndStatusAndCorrectAndIdNot(option.getQuestionId(),
 						RegistrationStatus.ACTIVE, true, option.getId()) > 0) {
@@ -748,6 +791,26 @@ public class TrainingCatalogService implements TrainingCatalog, TrainingExecutio
 				|| !ids.equals(Set.copyOf(existingIds))) {
 			throw rule("INVALID_CONTENT_ORDER", "A reordenação deve informar todos os itens uma única vez, com ordens únicas.");
 		}
+	}
+	private void ensureModuleOrder(UUID versionId, int order, UUID ignoredId) {
+		if (moduleRepository.findAllByTrainingVersionIdOrderByDisplayOrder(versionId).stream()
+				.anyMatch(item -> item.getDisplayOrder() == order && !item.getId().equals(ignoredId)))
+			throw rule("INVALID_CONTENT_ORDER", "A ordem do módulo já está sendo usada nesta versão.");
+	}
+	private void ensureVideoOrder(UUID moduleId, int order, UUID ignoredId) {
+		if (videoRepository.findAllByModuleIdOrderByDisplayOrder(moduleId).stream()
+				.anyMatch(item -> item.getDisplayOrder() == order && !item.getId().equals(ignoredId)))
+			throw rule("INVALID_CONTENT_ORDER", "A ordem do vídeo já está sendo usada neste módulo.");
+	}
+	private void ensureQuestionOrder(UUID questionnaireId, int order, UUID ignoredId) {
+		if (questionRepository.findAllByQuestionnaireIdOrderByDisplayOrder(questionnaireId).stream()
+				.anyMatch(item -> item.getDisplayOrder() == order && !item.getId().equals(ignoredId)))
+			throw rule("INVALID_CONTENT_ORDER", "A ordem da questão já está sendo usada neste questionário.");
+	}
+	private void ensureOptionOrder(UUID questionId, int order, UUID ignoredId) {
+		if (answerOptionRepository.findAllByQuestionIdOrderByDisplayOrder(questionId).stream()
+				.anyMatch(item -> item.getDisplayOrder() == order && !item.getId().equals(ignoredId)))
+			throw rule("INVALID_CONTENT_ORDER", "A ordem da alternativa já está sendo usada nesta questão.");
 	}
 	private Map<UUID, Integer> requestedOrder(OrderRequest request) {
 		return request.items().stream().collect(java.util.stream.Collectors.toMap(OrderRequest.Item::id, OrderRequest.Item::order));

@@ -772,6 +772,8 @@ Conteúdo publicado não deve ser alterado diretamente. Alteração relevante ex
 | PATCH | `/modules/{moduleId}` | ADM | Atualizar módulo de rascunho | 200 |
 | PATCH | `/modules/{moduleId}/status` | ADM | Ativar ou inativar | 200 |
 | PATCH | `/training-versions/{versionId}/modules/order` | ADM | Reordenar módulos | 200 |
+| DELETE | `/modules/{moduleId}` | ADM | Remover módulo do rascunho | 204 |
+| GET | `/modules/{moduleId}/videos` | ADM | Listar vídeos do módulo para edição | 200 |
 
 ### 19.1 Criar módulo
 
@@ -810,6 +812,7 @@ Conteúdo publicado não deve ser alterado diretamente. Alteração relevante ex
 | PATCH | `/videos/{videoId}` | ADM | Atualizar vídeo de rascunho | 200 |
 | PATCH | `/videos/{videoId}/status` | ADM | Ativar ou inativar | 200 |
 | PATCH | `/modules/{moduleId}/videos/order` | ADM | Reordenar vídeos | 200 |
+| DELETE | `/videos/{videoId}` | ADM | Remover vídeo do rascunho | 204 |
 | POST | `/videos/{videoId}/playback-url` | COL atribuído ou ADM | Gerar URL temporária de reprodução | 200 |
 
 ### 20.1 Criar vídeo
@@ -847,6 +850,7 @@ A API não deve retornar permanentemente uma URL pública do arquivo protegido.
 | PATCH | `/questionnaires/{questionnaireId}` | ADM | Atualizar questionário de rascunho | 200 |
 | PATCH | `/questionnaires/{questionnaireId}/status` | ADM | Ativar ou inativar | 200 |
 | DELETE | `/modules/{moduleId}/questionnaire` | ADM | Remover questionário do rascunho | 204 |
+| GET | `/modules/{moduleId}/questionnaire` | ADM | Consultar questionário opcional do módulo | 200/404 |
 
 ### 21.1 Criar questionário
 

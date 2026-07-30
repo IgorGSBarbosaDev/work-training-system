@@ -11,6 +11,7 @@ import static org.mockito.Mockito.inOrder;
 import dev.igorbarbosa.worktrainingsystem.shared.domain.RegistrationStatus;
 import dev.igorbarbosa.worktrainingsystem.shared.web.error.BusinessRuleViolationException;
 import dev.igorbarbosa.worktrainingsystem.trainings.api.CreateTrainingRequest;
+import dev.igorbarbosa.worktrainingsystem.trainings.api.ModuleRequest;
 import dev.igorbarbosa.worktrainingsystem.trainings.api.TrainingVersionRequest;
 import dev.igorbarbosa.worktrainingsystem.trainings.api.AnswerOptionRequest;
 import dev.igorbarbosa.worktrainingsystem.trainings.api.OrderRequest;
@@ -258,5 +259,22 @@ class TrainingCatalogServiceTest {
 		assertThat(duplicate.versionNumber()).isEqualTo(2);
 		assertThat(duplicate.status()).isEqualTo(TrainingVersionStatus.DRAFT);
 		assertThat(duplicate.passingScore()).isEqualByComparingTo("75");
+	}
+
+	@Test
+	void rejectsDuplicateModuleOrderBeforeDatabaseConstraint() {
+		UUID versionId = UUID.randomUUID();
+		TrainingVersion version = new TrainingVersion(UUID.randomUUID(), 1, 60, ValidityType.INDEFINITE, null,
+				BigDecimal.valueOf(70), null, 0);
+		ReflectionTestUtils.setField(version, "id", versionId);
+		TrainingModule existing = new TrainingModule(versionId, "Existente", null, 1, RegistrationStatus.ACTIVE);
+		ReflectionTestUtils.setField(existing, "id", UUID.randomUUID());
+		when(versionRepository.findById(versionId)).thenReturn(Optional.of(version));
+		when(moduleRepository.findAllByTrainingVersionIdOrderByDisplayOrder(versionId)).thenReturn(List.of(existing));
+
+		assertThatThrownBy(() -> service.createModule(versionId,
+				new ModuleRequest("Novo", null, 1, RegistrationStatus.ACTIVE)))
+				.isInstanceOf(BusinessRuleViolationException.class)
+				.extracting("code").isEqualTo("INVALID_CONTENT_ORDER");
 	}
 }

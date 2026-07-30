@@ -15,6 +15,7 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -118,5 +119,18 @@ public class TrainingVersionController {
 	public ModuleResponse moduleStatus(@PathVariable UUID moduleId,
 			@Valid @RequestBody ChangeRegistrationStatusRequest request) {
 		return service.changeModuleStatus(moduleId, request.status());
+	}
+
+	@DeleteMapping("/api/v1/modules/{moduleId}")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<Void> deleteModule(@PathVariable UUID moduleId) {
+		service.deleteModule(moduleId);
+		return ResponseEntity.noContent().build();
+	}
+
+	@GetMapping("/api/v1/modules/{moduleId}/videos")
+	@PreAuthorize("hasRole('ADMIN')")
+	public List<dev.igorbarbosa.worktrainingsystem.trainings.api.VideoResponse> listVideos(@PathVariable UUID moduleId) {
+		return service.listVideos(moduleId);
 	}
 }
