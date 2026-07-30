@@ -136,6 +136,94 @@ export type Training = {
   status: string
 }
 
+export type TrainingVersion = {
+  id: string
+  trainingId: string
+  versionNumber: number
+  workloadMinutes: number
+  validityType: 'DAYS' | 'MONTHS' | 'INDEFINITE'
+  validityValue?: number | null
+  passingScore: number
+  maxAttempts?: number | null
+  retryIntervalMinutes: number
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+  publishedAt?: string | null
+  trainingNameSnapshot?: string
+  trainingCodeSnapshot?: string
+}
+
+export type TrainingModule = {
+  id: string
+  trainingVersionId: string
+  title: string
+  description?: string | null
+  order: number
+  status: 'ACTIVE' | 'INACTIVE'
+}
+
+export type TrainingVideo = {
+  id: string
+  moduleId: string
+  title: string
+  description?: string | null
+  order: number
+  durationSeconds: number
+  storageObjectKey?: string | null
+  required: boolean
+  status: 'ACTIVE' | 'INACTIVE'
+  fileId?: string | null
+}
+
+export type TrainingQuestionnaire = {
+  id: string
+  moduleId: string
+  title: string
+  passingScore: number
+  maxAttempts?: number | null
+  retryIntervalMinutes: number
+  shuffleQuestions: boolean
+  status: 'ACTIVE' | 'INACTIVE'
+}
+
+export type TrainingQuestion = {
+  id: string
+  questionnaireId: string
+  statement: string
+  order: number
+  status: 'ACTIVE' | 'INACTIVE'
+}
+
+export type TrainingAnswerOption = {
+  id: string
+  questionId: string
+  text: string
+  correct: boolean
+  order: number
+  status: 'ACTIVE' | 'INACTIVE'
+}
+
+export type ContentSummary = {
+  versionId: string
+  activeModules: number
+  activeRequiredVideos: number
+  activeQuestionnaires: number
+  activeQuestions: number
+  publishable: boolean
+  violations: string[]
+}
+
+export type UploadResponse = {
+  uploadId: string
+  fileId: string
+  purpose: string
+  state: string
+  method?: string | null
+  uploadUrl?: string | null
+  objectKey?: string | null
+  expiresAt: string
+  requiredHeaders: Record<string, string>
+}
+
 export type Activity = {
   id: string
   name: string
