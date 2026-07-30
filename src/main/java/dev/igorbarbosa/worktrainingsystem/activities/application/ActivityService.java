@@ -130,7 +130,12 @@ public class ActivityService {
 
 	@Transactional
 	public ActivityResponse changeStatus(UUID activityId, RegistrationStatus status) {
-		Activity activity = find(activityId); activity.changeStatus(status); return ActivityResponse.from(activity);
+		Activity activity = find(activityId);
+		if (activity.getStatus() == status) return ActivityResponse.from(activity);
+		activity.changeStatus(status);
+		forEachActiveEmployeeChunk(activityId, employeeIds -> events.publishEvent(
+				new QualificationRecalculationRequested(DEFAULT_ORGANIZATION_ID, employeeIds, activityId)));
+		return ActivityResponse.from(activity);
 	}
 
 	@Transactional
@@ -139,26 +144,23 @@ public class ActivityService {
 		Activity activity = requireActiveActivity(request.activityId());
 		var existing = jobActivities.findByOrganizationIdAndJobIdAndActivityIdAndStatus(
 				DEFAULT_ORGANIZATION_ID, jobId, activity.getId(), RegistrationStatus.ACTIVE);
-		if (existing.isPresent()) return jobResponse(existing.get(), activity, 0);
+		if (existing.isPresent()) {
+			int linked = request.shouldApplyToCurrentEmployees()
+					? propagateJobActivityToCurrentEmployees(jobId, activity.getId(), existing.get()) : 0;
+			return jobResponse(existing.get(), activity, linked);
+		}
 		UUID actor = actor(); Instant now = Instant.now();
 		JobActivity link;
 		try { link = jobActivities.saveAndFlush(new JobActivity(DEFAULT_ORGANIZATION_ID, jobId, activity.getId(), actor, now)); }
 		catch (DataIntegrityViolationException exception) {
 			link = jobActivities.findByOrganizationIdAndJobIdAndActivityIdAndStatus(DEFAULT_ORGANIZATION_ID, jobId,
 					activity.getId(), RegistrationStatus.ACTIVE).orElseThrow(() -> exception);
-			return jobResponse(link, activity, 0);
+			int linked = request.shouldApplyToCurrentEmployees()
+					? propagateJobActivityToCurrentEmployees(jobId, activity.getId(), link) : 0;
+			return jobResponse(link, activity, linked);
 		}
-		int linked = 0;
-		if (request.shouldApplyToCurrentEmployees()) {
-			int page = 0; Page<EmployeeActivityCatalog.EmployeeSummary> values;
-			do {
-				values = employees.findActiveByJob(jobId, null, PageRequest.of(page++, PROPAGATION_CHUNK_SIZE, Sort.by("id")));
-				Set<UUID> employeeIds = values.stream().map(EmployeeActivityCatalog.EmployeeSummary::id).collect(Collectors.toSet());
-				for (UUID employeeId : employeeIds) if (addEmployeeOrigin(employeeId, activity.getId(), EmployeeActivityOrigin.JOB,
-						link.getId(), null, actor, now)) linked++;
-				propagate(employeeIds, activity.getId(), true);
-			} while (values.hasNext());
-		}
+		int linked = request.shouldApplyToCurrentEmployees()
+				? propagateJobActivityToCurrentEmployees(jobId, activity.getId(), link) : 0;
 		return jobResponse(link, activity, linked);
 	}
 
@@ -297,6 +299,24 @@ public class ActivityService {
 			events.publishEvent(assignmentEvent(requirement, employeeIds));
 		}
 		events.publishEvent(new QualificationRecalculationRequested(DEFAULT_ORGANIZATION_ID, employeeIds, activityId));
+	}
+
+	private int propagateJobActivityToCurrentEmployees(UUID jobId, UUID activityId, JobActivity link) {
+		UUID actor = actor();
+		Instant now = Instant.now();
+		int linked = 0;
+		int page = 0;
+		Page<EmployeeActivityCatalog.EmployeeSummary> values;
+		do {
+			values = employees.findActiveByJob(jobId, null,
+					PageRequest.of(page++, PROPAGATION_CHUNK_SIZE, Sort.by("id")));
+			Set<UUID> employeeIds = values.stream().map(EmployeeActivityCatalog.EmployeeSummary::id)
+					.collect(Collectors.toSet());
+			for (UUID employeeId : employeeIds) if (addEmployeeOrigin(employeeId, activityId,
+					EmployeeActivityOrigin.JOB, link.getId(), null, actor, now)) linked++;
+			propagate(employeeIds, activityId, true);
+		} while (values.hasNext());
+		return linked;
 	}
 
 	private void publishRequirementEvents(ActivityTrainingRequirement requirement, boolean assignments) {

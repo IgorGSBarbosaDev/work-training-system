@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -19,6 +21,7 @@ public class AuditLog {
 	@Column(name = "entity_id", updatable = false) private UUID entityId;
 	@Column(name = "occurred_at", nullable = false, updatable = false) private Instant occurredAt;
 	@Column(name = "request_id", updatable = false, length = 128) private String requestId;
+	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(nullable = false, updatable = false, columnDefinition = "jsonb") private String details;
 	protected AuditLog() {}
 	public AuditLog(UUID organizationId, AuditPort.AuditRecord record, String requestId, String details) {
