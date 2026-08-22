@@ -1,6 +1,7 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import {
   Activity as ActivityIcon,
+  Archive,
   ArrowRight,
   BadgeCheck,
   Bell,
@@ -16,6 +17,7 @@ import {
   Plus,
   QrCode,
   RefreshCw,
+  Save,
   ShieldAlert,
   UserCog,
   Users,
@@ -47,8 +49,12 @@ import {
   PageResponse,
   Qualification,
   Training,
+  TrainingVersion,
 } from './types'
 import { apiErrorMessage } from './pages-auth'
+import { TrainingVersionEditorPage as TrainingVersionEditorImpl } from './training-editor'
+
+export { TrainingVersionEditorImpl as TrainingVersionEditorPage }
 
 type CatalogItem = { id: string; name: string; code?: string; status: string; description?: string }
 type Unit = CatalogItem
@@ -471,25 +477,48 @@ export function CreateTrainingPage() {
   )
 }
 
-type TrainingVersion = {
-  id: string
-  versionNumber: number
-  status: string
-  workloadMinutes: number
-  validityType: string
-  validityValue?: number | null
-  passingScore: number
-}
-
 export function TrainingDetailPage() {
   const { trainingId = '' } = useParams()
   const training = useApiData<Training>(trainingId ? `/trainings/${trainingId}` : null)
   const versions = useApiData<TrainingVersion[]>(trainingId ? `/trainings/${trainingId}/versions` : null)
+  const [form, setForm] = useState({ name: '', code: '', description: '', category: '', regulatoryStandard: false })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!training.data) return
+    setForm({ name: training.data.name, code: training.data.code, description: training.data.description || '', category: training.data.category || '', regulatoryStandard: training.data.regulatoryStandard })
+  }, [training.data])
+
+  async function saveTraining(event: FormEvent) {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      await api(`/trainings/${trainingId}`, { method: 'PATCH', body: JSON.stringify({ name: form.name, code: form.code, description: form.description, category: form.category, isRegulatoryStandard: form.regulatoryStandard }) })
+      training.reload(); versions.reload(); toast.success('Dados do treinamento atualizados. Um rascunho foi preparado quando necessário.')
+    } catch (reason) { setError(apiErrorMessage(reason)) } finally { setSaving(false) }
+  }
+
+  async function changeStatus() {
+    if (!training.data) return
+    try { await api(`/trainings/${trainingId}/status`, { method: 'PATCH', body: JSON.stringify({ status: training.data.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }) }); training.reload(); toast.success('Status do treinamento atualizado.') } catch (reason) { toast.error(apiErrorMessage(reason)) }
+  }
+
+  async function duplicateVersion(versionId: string) {
+    try { const duplicate = await api<TrainingVersion>(`/training-versions/${versionId}/duplicate`, { method: 'POST' }); versions.reload(); toast.success(`Rascunho da versão ${duplicate.versionNumber} criado.`); window.location.href = `/admin/treinamentos/${trainingId}/versoes/${duplicate.id}/editor` } catch (reason) { toast.error(apiErrorMessage(reason)) }
+  }
+
+  async function archiveVersion(versionId: string) {
+    if (!window.confirm('Arquivar esta versão publicada? O histórico de conclusões continuará preservado.')) return
+    try { await api(`/training-versions/${versionId}/archive`, { method: 'POST' }); versions.reload(); toast.success('Versão arquivada.') } catch (reason) { toast.error(apiErrorMessage(reason)) }
+  }
 
   if (training.loading || versions.loading) return <LoadingState />
   if (training.error) return <ErrorState message={training.error} retry={training.reload} />
   if (versions.error) return <ErrorState message={versions.error} retry={versions.reload} />
   if (!training.data) return <EmptyState title="Treinamento não encontrado" />
+  const latestVersion = versions.data?.[0]
 
   return (
     <div>
@@ -498,140 +527,15 @@ export function TrainingDetailPage() {
         eyebrow={`${training.data.code} · ${training.data.category || 'Sem categoria'}`}
         title={training.data.name}
         description={training.data.description}
-        action={<StatusBadge value={training.data.status} />}
+        action={<div className="flex flex-wrap items-center gap-2"><StatusBadge value={training.data.status} /><Button variant="outline" onClick={changeStatus}>{training.data.status === 'ACTIVE' ? 'Inativar' : 'Ativar'}</Button></div>}
       />
-      {!versions.data?.length ? (
-        <EmptyState title="Nenhuma versão cadastrada" />
-      ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {versions.data.map((version) => (
-            <Link
-              key={version.id}
-              to={`/admin/treinamentos/${trainingId}/versoes/${version.id}/editor`}
-              className="panel p-5 transition hover:border-primary"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <span className="eyebrow text-primary">Versão {version.versionNumber}</span>
-                <StatusBadge value={version.status} />
-              </div>
-              <dl className="mt-5 grid grid-cols-2 gap-4">
-                <Info label="Carga horária" value={`${version.workloadMinutes} min`} />
-                <Info label="Nota mínima" value={`${version.passingScore}%`} />
-                <Info label="Validade" value={version.validityType} />
-              </dl>
-              <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">
-                Abrir editor <ArrowRight size={15} />
-              </span>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-type Module = { id: string; title: string; description: string; order: number; status: string }
-
-export function TrainingVersionEditorPage() {
-  const { trainingId = '', versionId = '' } = useParams()
-  const version = useApiData<TrainingVersion>(versionId ? `/training-versions/${versionId}` : null)
-  const modules = useApiData<Module[]>(versionId ? `/training-versions/${versionId}/modules` : null)
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  async function createModule(event: FormEvent) {
-    event.preventDefault()
-    setSubmitting(true)
-    try {
-      await api(`/training-versions/${versionId}/modules`, {
-        method: 'POST',
-        body: JSON.stringify({
-          title,
-          description,
-          order: (modules.data?.length || 0) + 1,
-          status: 'ACTIVE',
-        }),
-      })
-      setTitle('')
-      setDescription('')
-      modules.reload()
-      toast.success('Módulo adicionado ao rascunho.')
-    } catch (reason) {
-      toast.error(apiErrorMessage(reason))
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  async function publish() {
-    try {
-      await api(`/training-versions/${versionId}/publish`, { method: 'POST' })
-      version.reload()
-      toast.success('Versão publicada.')
-    } catch (reason) {
-      toast.error(apiErrorMessage(reason))
-    }
-  }
-
-  if (version.loading || modules.loading) return <LoadingState />
-  if (version.error) return <ErrorState message={version.error} retry={version.reload} />
-  if (modules.error) return <ErrorState message={modules.error} retry={modules.reload} />
-  if (!version.data) return <EmptyState title="Versão não encontrada" />
-
-  const draft = version.data.status === 'DRAFT'
-  return (
-    <div>
-      <BackLink to={`/admin/treinamentos/${trainingId}`}>Detalhe do treinamento</BackLink>
-      <PageHeader
-        eyebrow="Editor de conteúdo"
-        title={`Versão ${version.data.versionNumber}`}
-        description="Organize módulos e revise o conteúdo antes de publicar. Versões publicadas permanecem imutáveis."
-        action={draft ? <Button onClick={publish}>Publicar versão</Button> : <StatusBadge value={version.data.status} />}
-      />
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_.8fr]">
-        <section className="panel">
-          <header className="border-b border-border p-5">
-            <h2 className="display text-2xl font-bold">Módulos</h2>
-          </header>
-          {!modules.data?.length ? (
-            <div className="p-5 text-sm text-muted-foreground">Nenhum módulo cadastrado.</div>
-          ) : (
-            <div className="divide-y divide-border">
-              {modules.data.map((module) => (
-                <div key={module.id} className="flex items-center gap-4 p-5">
-                  <span className="grid size-9 place-items-center bg-muted font-mono text-xs text-primary">{module.order}</span>
-                  <span className="min-w-0 flex-1">
-                    <strong className="block text-sm">{module.title}</strong>
-                    <span className="mt-1 block text-xs text-muted-foreground">{module.description || 'Sem descrição'}</span>
-                  </span>
-                  <StatusBadge value={module.status} />
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-        <form onSubmit={createModule} className="panel h-fit p-5">
-          <p className="eyebrow text-primary">Novo módulo</p>
-          <h2 className="display mt-2 text-2xl font-bold">Adicionar ao rascunho</h2>
-          <div className="mt-5 space-y-4">
-            <FormField label="Título" value={title} onChange={setTitle} maxLength={150} disabled={!draft} />
-            <label>
-              <span className="mb-1.5 block text-sm font-semibold">Descrição</span>
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                rows={3}
-                disabled={!draft}
-                className="w-full rounded-md border border-border p-3 text-sm disabled:bg-muted"
-              />
-            </label>
-            <Button disabled={!draft || submitting} className="w-full">
-              {submitting ? <InlineLoading label="Adicionando" /> : <><Plus size={16} /> Adicionar módulo</>}
-            </Button>
-          </div>
-        </form>
-      </div>
+      <form onSubmit={saveTraining} className="panel mb-6">
+        <header className="border-b border-border p-5"><p className="eyebrow text-primary">Cadastro principal</p><h2 className="display mt-2 text-2xl font-bold">Dados do treinamento</h2><p className="mt-1 text-sm text-muted-foreground">Alterações relevantes preparam um novo rascunho e não modificam versões já iniciadas ou concluídas.</p></header>
+        <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-7"><FormField label="Nome" value={form.name} onChange={(name) => setForm({ ...form, name })} maxLength={150} /><FormField label="Código" value={form.code} onChange={(code) => setForm({ ...form, code: code.toUpperCase() })} maxLength={50} pattern="[A-Za-z0-9][A-Za-z0-9_-]*" /><FormField label="Categoria" value={form.category} onChange={(category) => setForm({ ...form, category })} required={false} /><label className="flex items-center gap-3 border border-border p-3"><input type="checkbox" checked={form.regulatoryStandard} onChange={(event) => setForm({ ...form, regulatoryStandard: event.target.checked })} className="size-4 accent-[#0f6973]" /><span className="text-sm font-semibold">Norma regulamentadora (NR)</span></label><label className="sm:col-span-2"><span className="mb-1.5 block text-sm font-semibold">Descrição</span><textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} maxLength={2000} rows={3} className="w-full rounded-md border border-border bg-card p-3 text-sm" /></label></div>
+        <footer className="border-t border-border p-5"><InlineErrorManagement message={error} /><div className="mt-3 flex justify-end"><Button disabled={saving}>{saving ? <InlineLoading label="Salvando" /> : <><Save size={16} /> Salvar dados</>}</Button></div></footer>
+      </form>
+      <PageHeader eyebrow="Histórico imutável" title="Versões" description="Uma atribuição mantém a versão exata em que foi iniciada. Publique uma nova cópia para evoluir o conteúdo." action={latestVersion ? <Button onClick={() => duplicateVersion(latestVersion.id)}><Plus size={16} /> Nova versão</Button> : undefined} />
+      {!versions.data?.length ? <EmptyState title="Nenhuma versão cadastrada" /> : <div className="grid gap-4 lg:grid-cols-2">{versions.data.map((version) => <div key={version.id} className="panel p-5"><div className="flex items-start justify-between gap-3"><span className="eyebrow text-primary">Versão {version.versionNumber}</span><StatusBadge value={version.status} /></div><dl className="mt-5 grid grid-cols-2 gap-4"><Info label="Carga horária" value={`${version.workloadMinutes} min`} /><Info label="Nota mínima" value={`${version.passingScore}%`} /><Info label="Validade" value={version.validityType === 'INDEFINITE' ? 'Indeterminada' : `${version.validityValue} ${version.validityType === 'DAYS' ? 'dias' : 'meses'}`} /><Info label="Publicação" value={formatDate(version.publishedAt)} /></dl><div className="mt-5 flex flex-wrap gap-2">{version.status === 'DRAFT' && <LinkButton to={`/admin/treinamentos/${trainingId}/versoes/${version.id}/editor`} variant="primary">Abrir editor <ArrowRight size={15} /></LinkButton>}{version.status !== 'DRAFT' && <Button variant="outline" onClick={() => duplicateVersion(version.id)}><Plus size={15} /> Criar nova versão</Button>}{version.status === 'PUBLISHED' && <Button variant="ghost" onClick={() => archiveVersion(version.id)}><Archive size={15} /> Arquivar</Button>}</div></div>)}</div>}
     </div>
   )
 }
@@ -1407,6 +1311,10 @@ function Info({ label, value }: { label: string; value: string }) {
       <dd className="mt-1 break-words text-sm font-semibold">{value}</dd>
     </div>
   )
+}
+
+function InlineErrorManagement({ message }: { message: string }) {
+  return message ? <p className="text-sm text-destructive" role="alert">{message}</p> : null
 }
 
 function initials(name: string): string {

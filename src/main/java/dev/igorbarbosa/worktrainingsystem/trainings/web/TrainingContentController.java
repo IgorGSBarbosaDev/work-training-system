@@ -62,6 +62,13 @@ public class TrainingContentController {
 		return service.changeVideoStatus(videoId, request.status());
 	}
 
+	@DeleteMapping("/api/v1/videos/{videoId}")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<Void> deleteVideo(@PathVariable UUID videoId) {
+		service.deleteVideo(videoId);
+		return ResponseEntity.noContent().build();
+	}
+
 	@PatchMapping("/api/v1/modules/{moduleId}/videos/order")
 	@PreAuthorize("hasRole('ADMIN')")
 	public List<VideoResponse> reorderVideos(@PathVariable UUID moduleId, @Valid @RequestBody OrderRequest request) {
@@ -100,6 +107,13 @@ public class TrainingContentController {
 	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<Void> deleteQuestionnaire(@PathVariable UUID moduleId) {
 		service.deleteQuestionnaire(moduleId); return ResponseEntity.noContent().build();
+	}
+
+	@GetMapping("/api/v1/modules/{moduleId}/questionnaire")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<QuestionnaireResponse> getQuestionnaireByModule(@PathVariable UUID moduleId) {
+		return service.findQuestionnaireByModule(moduleId).map(ResponseEntity::ok)
+				.orElseGet(() -> ResponseEntity.notFound().build());
 	}
 
 	@PostMapping("/api/v1/questionnaires/{questionnaireId}/questions")
