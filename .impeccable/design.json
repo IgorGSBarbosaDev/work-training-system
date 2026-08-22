@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-22T00:00:00-03:00",
+  "title": "Design System: worksafe training system",
+  "extensions": {
+    "colorMeta": {
+      "background": { "role": "neutral", "displayName": "Papel frio", "canonical": "#f5f7f7", "tonalRamp": ["#1b292c", "#334346", "#4b5b5e", "#637275", "#7b898b", "#a2adaf", "#c9d0d1", "#f5f7f7"] },
+      "foreground": { "role": "neutral", "displayName": "Carvão teal", "canonical": "#172529", "tonalRamp": ["#172529", "#2e3c40", "#465358", "#5e6a6e", "#778185", "#9fa8ab", "#c7cdcf", "#eef0f0"] },
+      "card": { "role": "neutral", "displayName": "Branco de superfície", "canonical": "#ffffff", "tonalRamp": ["#1c1c1c", "#393939", "#555555", "#717171", "#8e8e8e", "#aaaaaa", "#d5d5d5", "#ffffff"] },
+      "muted": { "role": "neutral", "displayName": "Cinza névoa", "canonical": "#eef2f3", "tonalRamp": ["#1f292b", "#3c4749", "#596466", "#768183", "#929d9f", "#b0b9ba", "#cdd3d4", "#eef2f3"] },
+      "muted-foreground": { "role": "neutral", "displayName": "Cinza de orientação", "canonical": "#607078", "tonalRamp": ["#20292c", "#3b4549", "#566166", "#717c80", "#8c969a", "#a8b0b3", "#c4cacc", "#e0e3e4"] },
+      "border": { "role": "neutral", "displayName": "Linha fria", "canonical": "#d9e1e3", "tonalRamp": ["#263034", "#444e52", "#626d71", "#7f898d", "#9da6a9", "#bac1c3", "#d9e1e3", "#f4f6f6"] },
+      "primary": { "role": "primary", "displayName": "Teal industrial profundo", "canonical": "#0f6973", "tonalRamp": ["#082a2e", "#0b3b41", "#0c4b52", "#0e5a62", "#0f6973", "#3a8991", "#7bb5ba", "#d5ebed"] },
+      "primary-foreground": { "role": "neutral", "displayName": "Branco de ação", "canonical": "#ffffff", "tonalRamp": ["#1c1c1c", "#393939", "#555555", "#717171", "#8e8e8e", "#aaaaaa", "#d5d5d5", "#ffffff"] },
+      "primary-deep": { "role": "primary", "displayName": "Teal industrial escurecido", "canonical": "#0b5962", "tonalRamp": ["#062328", "#08333a", "#09434b", "#0a4e57", "#0b5962", "#397c83", "#75a8ac", "#cbe1e3"] },
+      "sidebar": { "role": "neutral", "displayName": "Trilho profundo", "canonical": "#1b2c31", "tonalRamp": ["#1b2c31", "#344346", "#4d5a5d", "#667174", "#7f898c", "#a5adaf", "#cbd0d1", "#f0f2f2"] },
+      "sidebar-accent": { "role": "primary", "displayName": "Acento do trilho", "canonical": "#294449", "tonalRamp": ["#294449", "#455b5e", "#607174", "#7b888a", "#95a0a2", "#b1b9ba", "#ccd1d2", "#e8ebeb"] },
+      "sidebar-border": { "role": "neutral", "displayName": "Linha do trilho", "canonical": "#334a50", "tonalRamp": ["#334a50", "#4e6267", "#68797d", "#829195", "#9ca9ac", "#b7c0c2", "#d1d7d8", "#ecf0f0"] },
+      "destructive": { "role": "tertiary", "displayName": "Vermelho tijolo de bloqueio", "canonical": "#a94236", "tonalRamp": ["#3d1713", "#5a211b", "#712a22", "#8d362d", "#a94236", "#bd6a61", "#d69a94", "#f0d3cf"] },
+      "destructive-deep": { "role": "tertiary", "displayName": "Vermelho tijolo escurecido", "canonical": "#8f352c", "tonalRamp": ["#34110e", "#4b1915", "#62211b", "#782b24", "#8f352c", "#ac625a", "#c68f89", "#e8ceca"] },
+      "success": { "role": "tertiary", "displayName": "Verde de aprovação", "canonical": "#2f7654", "tonalRamp": ["#102d20", "#17442f", "#20583d", "#276b4a", "#2f7654", "#5e9a7b", "#9bc6ad", "#d9eee1"] },
+      "success-wash": { "role": "tertiary", "displayName": "Lavagem de aprovação", "canonical": "#edf7f0", "tonalRamp": ["#1b2d22", "#38503f", "#556e5b", "#718c77", "#8fa98f", "#abbfae", "#cbdccc", "#edf7f0"] },
+      "success-line": { "role": "tertiary", "displayName": "Linha de aprovação", "canonical": "#b7d8c8", "tonalRamp": ["#1e392b", "#3b5545", "#587060", "#758b7b", "#91a69a", "#b7d8c8", "#d8e9df", "#f4faf6"] },
+      "warning": { "role": "tertiary", "displayName": "Âmbar de atenção", "canonical": "#9a6814", "tonalRamp": ["#392707", "#563b09", "#704d0c", "#855a10", "#9a6814", "#b28b48", "#ceb27d", "#f0e4ca"] },
+      "warning-wash": { "role": "tertiary", "displayName": "Lavagem de atenção", "canonical": "#fff8e7", "tonalRamp": ["#3b3020", "#594c37", "#766752", "#92836d", "#b0a18a", "#cdc0a9", "#e8ddc8", "#fff8e7"] },
+      "warning-line": { "role": "tertiary", "displayName": "Linha de atenção", "canonical": "#e8d29f", "tonalRamp": ["#3d321e", "#5b4d31", "#786642", "#957f53", "#b39a64", "#cbb77f", "#e8d29f", "#faf3df"] },
+      "skeleton": { "role": "neutral", "displayName": "Base do skeleton", "canonical": "#e6ecee", "tonalRamp": ["#1e282a", "#3a4648", "#566164", "#727d80", "#8f999b", "#abb4b6", "#c8ced0", "#e6ecee"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display condensado", "purpose": "Títulos de página, métricas e estados que precisam ser localizados rapidamente." },
+      "body": { "displayName": "Texto de operação", "purpose": "Leitura contínua de instruções, descrições, tabelas e conteúdo de trabalho." },
+      "label": { "displayName": "Label operacional", "purpose": "Eyebrows, categorias, índices e estados curtos." }
+    },
+    "shadows": [
+      { "name": "panel-ambient", "value": "0 14px 35px rgb(23 37 41 / 8%)", "purpose": "Separação suave de painéis em repouso." },
+      { "name": "overlay-structural", "value": "shadow-xl", "purpose": "Elevação de menus, drawers e popovers sobre o fluxo principal." }
+    ],
+    "motion": [
+      { "name": "state-transition", "value": "transition", "purpose": "Mudanças discretas de hover e estado sem deslocar o layout." },
+      { "name": "skeleton-shimmer", "value": "1.4s infinite", "purpose": "Indicar carregamento sem bloquear a leitura do estado." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal de confirmação, avanço ou envio.",
+      "html": "<button class=\"ds-btn-primary\">Entrar <svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h14M13 6l6 6-6 6\" /></svg></button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 2.5rem; padding: 0.5rem 1rem; border: 1px solid var(--color-primary); border-radius: 0.375rem; background: var(--color-primary); color: #fff; font: 600 0.875rem Inter, Segoe UI, Arial, sans-serif; transition: background 0.2s, border-color 0.2s; } .ds-btn-primary svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; } .ds-btn-primary:hover { border-color: var(--color-primary-deep); background: var(--color-primary-deep); } .ds-btn-primary:focus-visible { outline: 3px solid rgb(15 105 115 / 28%); outline-offset: 2px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Ação secundária que preserva a superfície de trabalho.",
+      "html": "<button class=\"ds-btn-outline\">Tentar novamente <svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4\" /></svg></button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 2.5rem; padding: 0.5rem 1rem; border: 1px solid var(--color-border); border-radius: 0.375rem; background: var(--color-card); color: var(--color-foreground); font: 600 0.875rem Inter, Segoe UI, Arial, sans-serif; transition: border-color 0.2s, color 0.2s; } .ds-btn-outline svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; } .ds-btn-outline:hover { border-color: var(--color-primary); color: var(--color-primary); } .ds-btn-outline:focus-visible { outline: 3px solid rgb(15 105 115 / 28%); outline-offset: 2px; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "status-badge",
+      "description": "Estado compacto com texto e ícone para leitura operacional.",
+      "html": "<span class=\"ds-status ds-status-success\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m5 12 4 4L19 6\" /></svg>Concluído</span>",
+      "css": ".ds-status { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.5rem; border: 1px solid; border-radius: 0.375rem; font: 600 0.625rem/1 DM Mono, Consolas, monospace; letter-spacing: 0.04em; text-transform: uppercase; } .ds-status svg { width: 0.75rem; height: 0.75rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; } .ds-status-success { border-color: #b7d8c8; background: #edf7f0; color: var(--color-success); } .ds-status-success:focus-visible { outline: 3px solid rgb(15 105 115 / 28%); outline-offset: 2px; }"
+    },
+    {
+      "name": "Panel Card",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Superfície principal para métricas, estados e conteúdo de trabalho.",
+      "html": "<article class=\"ds-panel\"><p class=\"ds-panel-label\">Treinamentos válidos</p><strong class=\"ds-panel-value\">24</strong><p class=\"ds-panel-detail\">+4 neste mês</p></article>",
+      "css": ".ds-panel { min-height: 7rem; padding: 1rem; border: 1px solid var(--color-border); border-left: 4px solid var(--color-primary); border-radius: 0.375rem; background: var(--color-card); box-shadow: 0 14px 35px rgb(23 37 41 / 8%); } .ds-panel-label { margin: 0; color: var(--color-muted-foreground); font: 600 0.75rem/1.2 Inter, Segoe UI, Arial, sans-serif; } .ds-panel-value { display: block; margin-top: 0.75rem; color: var(--color-foreground); font: 700 1.875rem/1 Roboto Condensed, Arial Narrow, Inter, sans-serif; letter-spacing: -0.025em; } .ds-panel-detail { margin: 0.5rem 0 0; color: var(--color-muted-foreground); font: 400 0.75rem/1.4 Inter, Segoe UI, Arial, sans-serif; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de busca ou entrada de dados com foco acessível.",
+      "html": "<label class=\"ds-field\"><span>E-mail corporativo</span><input type=\"email\" placeholder=\"nome@empresa.com\" /></label>",
+      "css": ".ds-field { display: block; color: var(--color-foreground); font: 600 0.875rem/1.2 Inter, Segoe UI, Arial, sans-serif; } .ds-field span { display: block; margin-bottom: 0.375rem; } .ds-field input { width: 100%; height: 2.75rem; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: 0.375rem; background: var(--color-card); color: var(--color-foreground); font: 400 0.875rem Inter, Segoe UI, Arial, sans-serif; } .ds-field input::placeholder { color: var(--color-muted-foreground); } .ds-field input:focus-visible { border-color: var(--color-primary); outline: 3px solid rgb(15 105 115 / 28%); outline-offset: 2px; }"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Trilho persistente que torna o escopo do perfil navegável.",
+      "html": "<nav class=\"ds-sidebar\" aria-label=\"Navegação principal\"><div class=\"ds-brand\">worksafe</div><a class=\"ds-nav-item ds-nav-item-active\" href=\"#\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m3 11 9-8 9 8v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9Z\" /></svg>Visão geral</a><a class=\"ds-nav-item\" href=\"#\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm13 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\" /></svg>Colaboradores</a></nav>",
+      "css": ".ds-sidebar { width: 16rem; min-height: 17rem; padding: 1.25rem; background: var(--color-sidebar); color: #fff; } .ds-brand { margin-bottom: 1.5rem; color: #fff; font: 700 1.0625rem/1 Roboto Condensed, Arial Narrow, Inter, sans-serif; } .ds-nav-item { display: flex; align-items: center; gap: 0.75rem; min-height: 2.5rem; margin-bottom: 0.25rem; padding: 0.625rem 0.75rem; border-radius: 0.375rem; color: #bdd0d1; font: 600 0.875rem Inter, Segoe UI, Arial, sans-serif; text-decoration: none; transition: background 0.2s, color 0.2s; } .ds-nav-item svg { width: 1.0625rem; height: 1.0625rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; } .ds-nav-item:hover, .ds-nav-item-active { background: var(--color-sidebar-accent); color: #fff; } .ds-nav-item:focus-visible { outline: 3px solid rgb(142 210 204 / 45%); outline-offset: 2px; }"
+    },
+    {
+      "name": "Empty State",
+      "kind": "custom",
+      "refersTo": "empty-state",
+      "description": "Estado orientador para listas sem registros ou filtros sem resultado.",
+      "html": "<section class=\"ds-empty\"><span class=\"ds-empty-icon\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 4h16v16H4zM8 8h8M8 12h5M8 16h8\" /></svg></span><h2>Nenhum registro encontrado</h2><p>Não há dados para exibir com os filtros atuais.</p></section>",
+      "css": ".ds-empty { display: grid; min-height: 14rem; place-items: center; padding: 2rem; border: 1px solid var(--color-border); border-radius: 0.375rem; background: var(--color-card); text-align: center; box-shadow: 0 14px 35px rgb(23 37 41 / 8%); } .ds-empty-icon { display: grid; width: 3rem; height: 3rem; place-items: center; border-radius: 0.375rem; background: var(--color-muted); color: var(--color-primary); } .ds-empty-icon svg { width: 1.375rem; height: 1.375rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; } .ds-empty h2 { margin: 1rem 0 0; color: var(--color-foreground); font: 700 1.5rem/1 Roboto Condensed, Arial Narrow, Inter, sans-serif; letter-spacing: -0.025em; } .ds-empty p { max-width: 26rem; margin: 0.5rem 0 0; color: var(--color-muted-foreground); font: 400 0.875rem/1.5 Inter, Segoe UI, Arial, sans-serif; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Manual de campo digital",
+    "overview": "O sistema visual traduz a ideia de um manual de campo que precisa ser consultado com rapidez e confiança. A interface é precisa, calma e operacional: a hierarquia informa o próximo passo, os estados tornam a situação legível e os controles têm aparência confiável sem criar ruído decorativo.\n\nO mundo atual combina superfícies claras e frias com uma navegação lateral em teal-azul profundo. Títulos condensados ajudam na orientação rápida; corpo neutro mantém a leitura confortável; labels monoespaçados sinalizam dados, status e linguagem operacional. A composição evita o dashboard SaaS genérico, excesso de ornamentação e dependência de cor isolada.",
+    "keyCharacteristics": ["Scanabilidade operacional", "Navegação orientada por perfil", "Superfícies tonais e bordas discretas", "Status expressos por texto, ícone e cor", "Contraste calmo entre área de trabalho e trilho de navegação"],
+    "rules": [
+      { "name": "The Status-as-Signal Rule", "body": "Toda cor semântica deve aparecer acompanhada de texto e/ou ícone; cor sozinha nunca é a única fonte de significado.", "section": "colors" },
+      { "name": "The Field-Note Hierarchy Rule", "body": "Use títulos condensados para localizar a seção, texto neutro para explicar a tarefa e mono espaçada apenas quando a informação tiver caráter de código, status ou índice.", "section": "typography" },
+      { "name": "The Calm Layer Rule", "body": "A profundidade deve explicar a relação entre superfícies; não deve competir com o conteúdo nem transformar cada componente em um objeto flutuante.", "section": "elevation" }
+    ],
+    "dos": ["Do priorizar leitura rápida de pendências, validade, qualificação e próxima ação.", "Do manter a combinação de títulos condensados, corpo neutro e labels monoespaçados.", "Do usar bordas frias e sombra ambiente para separar superfícies antes de adicionar decoração.", "Do mostrar texto e ícone junto de cores semânticas.", "Do preservar a navegação orientada por perfil e a adaptação para mobile."],
+    "donts": ["Don't usar cor como único indicador de estado.", "Don't transformar cada painel em um cartão flutuante com sombra forte.", "Don't substituir a precisão operacional por ornamentos, gradientes chamativos ou animações gratuitas.", "Don't criar uma estética de dashboard SaaS genérico que esconda o próximo passo.", "Don't expor ações ou informações fora do escopo autorizado do perfil."]
+  }
+}
