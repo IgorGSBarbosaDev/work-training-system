@@ -63,8 +63,17 @@ export function itemsFromPage(data) {
 }
 
 export async function listAll(path, token) {
-  const response = await api(`${path}${path.includes('?') ? '&' : '?'}page=0&size=100`, { token })
-  return itemsFromPage(response.data)
+  const values = []
+  let page = 0
+  while (page < 100) {
+    const response = await api(`${path}${path.includes('?') ? '&' : '?'}page=${page}&size=100`, { token })
+    const pageValues = itemsFromPage(response.data)
+    values.push(...pageValues)
+    if (Array.isArray(response.data) || response.data?.last === true || pageValues.length === 0
+      || (Number.isInteger(response.data?.totalPages) && page + 1 >= response.data.totalPages)) break
+    page += 1
+  }
+  return values
 }
 
 export async function tryGet(path, token) {

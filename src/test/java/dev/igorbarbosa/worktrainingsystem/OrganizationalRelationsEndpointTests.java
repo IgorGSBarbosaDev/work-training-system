@@ -31,6 +31,7 @@ import dev.igorbarbosa.worktrainingsystem.trainings.persistence.TrainingReposito
 import dev.igorbarbosa.worktrainingsystem.trainings.persistence.TrainingVersionRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,6 +81,7 @@ class OrganizationalRelationsEndpointTests {
 
 	@Test
 	void propagatesRelationsAndRecalculatesQualificationStatesWithoutDeletingHistory() throws Exception {
+		Instant completionAt = Instant.now().minus(5, ChronoUnit.DAYS);
 		User actor = users.saveAndFlush(new User(DEFAULT_ORGANIZATION_ID, "priority2-admin@example.com", "hash",
 				UserRole.ADMIN, UserStatus.ACTIVE, null, Instant.parse("2026-07-29T12:00:00Z")));
 		SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
@@ -152,8 +154,8 @@ class OrganizationalRelationsEndpointTests {
 
 		mockMvc.perform(post("/api/v1/training-completions/manual").with(csrf())
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"employeeId\":\"%s\",\"trainingId\":\"%s\",\"trainingVersionId\":\"%s\",\"completedAt\":\"2026-07-29T12:00:00Z\",\"score\":100,\"validityType\":\"DAYS\",\"validityValue\":10,\"notes\":\"Conclusão externa P2\"}"
-						.formatted(employee.getId(), training.getId(), version.getId())))
+				.content("{\"employeeId\":\"%s\",\"trainingId\":\"%s\",\"trainingVersionId\":\"%s\",\"completedAt\":\"%s\",\"score\":100,\"validityType\":\"DAYS\",\"validityValue\":10,\"notes\":\"Conclusão externa P2\"}"
+						.formatted(employee.getId(), training.getId(), version.getId(), completionAt)))
 				.andExpect(status().isCreated());
 		mockMvc.perform(get("/api/v1/qualifications").param("employeeId", employee.getId().toString())
 					.param("activityId", activityOne.toString()).param("status", "EXPIRING"))
