@@ -45,6 +45,9 @@ frontend/.vite/
 frontend/coverage/
 frontend/*.tsbuildinfo
 
+### Acceptance artifacts ###
+acceptance-artifacts/
+
 ### Design handoff sources ###
 /work-training-system-figma-export/
 /work-training-system-figma-export.zip
