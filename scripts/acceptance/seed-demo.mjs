@@ -4,7 +4,6 @@ import {
   listAll,
   login,
   resetPasswordFromMailpit,
-  sha256,
   tryGet,
   waitFor,
   waitForHealth,
@@ -108,7 +107,7 @@ async function ensureTraining(adminToken) {
     method: 'POST', token: adminToken,
     body: {
       purpose: 'TRAINING_VIDEO', fileName: 'acceptance-fixture.mp4', contentType: 'video/mp4',
-      sizeBytes: fixture.length, checksumSha256: sha256(fixture),
+      sizeBytes: fixture.length,
     },
     expected: [201],
   })

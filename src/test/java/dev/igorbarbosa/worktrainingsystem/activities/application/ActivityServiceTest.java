@@ -4,6 +4,7 @@ import static dev.igorbarbosa.worktrainingsystem.shared.persistence.Organization
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -186,6 +187,19 @@ class ActivityServiceTest {
 		assertThat(job.getStatus()).isEqualTo(RegistrationStatus.INACTIVE);
 		assertThat(manual.getStatus()).isEqualTo(RegistrationStatus.ACTIVE);
 		assertThat(source.getStatus()).isEqualTo(RegistrationStatus.INACTIVE);
+	}
+
+	@Test
+	void changingActivityStatusRequestsQualificationRecalculationForAssignedEmployees() {
+		when(activities.findByIdAndOrganizationId(activityId, DEFAULT_ORGANIZATION_ID)).thenReturn(Optional.of(activity));
+		when(employeeActivities.findActiveEmployeeIds(eq(DEFAULT_ORGANIZATION_ID), eq(activityId),
+				org.mockito.ArgumentMatchers.any())).thenReturn(new PageImpl<>(List.of(employeeId)));
+
+		service.changeStatus(activityId, RegistrationStatus.INACTIVE);
+
+		assertThat(activity.getStatus()).isEqualTo(RegistrationStatus.INACTIVE);
+		verify(events).publishEvent(new QualificationRecalculationRequested(
+				DEFAULT_ORGANIZATION_ID, Set.of(employeeId), activityId));
 	}
 
 	private EmployeeActivity link(EmployeeActivityOrigin origin, UUID source, String reason) {

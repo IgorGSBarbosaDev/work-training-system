@@ -28,6 +28,7 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<maven.compiler.release>21</maven.compiler.release>
 		<minio.version>8.5.17</minio.version>
 		<pdfbox.version>3.0.8</pdfbox.version>
 		<springdoc.version>3.0.3</springdoc.version>
@@ -187,8 +188,8 @@
 					<configuration>
 						<rules>
 							<requireJavaVersion>
-								<version>[21,22)</version>
-								<message>Este projeto exige JDK 21.x. Configure JAVA_HOME para uma instalação Java 21.</message>
+								<version>[21,)</version>
+								<message>Este projeto exige JDK 21 ou superior. Configure JAVA_HOME para uma instalação compatível.</message>
 							</requireJavaVersion>
 						</rules>
 						<fail>true</fail>

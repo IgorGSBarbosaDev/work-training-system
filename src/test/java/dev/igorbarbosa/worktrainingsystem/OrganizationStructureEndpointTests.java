@@ -22,6 +22,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 @Import(TestcontainersConfiguration.class)
@@ -126,6 +127,28 @@ class OrganizationStructureEndpointTests {
 
 	@Test
 	@WithMockUser(roles = "ADMIN")
+	void updatesAndInactivatesSector() throws Exception {
+		Unit unit = unitRepository.saveAndFlush(new Unit(
+				DEFAULT_ORGANIZATION_ID, "Unidade Setor", "UNS", RegistrationStatus.ACTIVE));
+		MvcResult created = mockMvc.perform(post("/api/v1/sectors")
+				.with(csrf()).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"unitId\":\"%s\",\"name\":\"Produção\",\"code\":\"PROD\",\"status\":\"ACTIVE\"}"
+						.formatted(unit.getId())))
+				.andExpect(status().isCreated()).andReturn();
+		String sectorId = idOf(created);
+
+		mockMvc.perform(patch("/api/v1/sectors/{sectorId}", sectorId).with(csrf())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"name\":\"Produção Central\",\"code\":\"PRC\"}"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Produção Central"))
+				.andExpect(jsonPath("$.code").value("PRC"));
+		mockMvc.perform(patch("/api/v1/sectors/{sectorId}/status", sectorId).with(csrf())
+				.contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"INACTIVE\"}"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.status").value("INACTIVE"));
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
 	void returnsNotFoundWhenSectorUnitDoesNotExist() throws Exception {
 		mockMvc.perform(post("/api/v1/sectors")
 					.with(csrf())
@@ -153,6 +176,25 @@ class OrganizationStructureEndpointTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.content", hasSize(1)))
 				.andExpect(jsonPath("$.content[0].description").value("Opera máquinas."));
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void updatesAndInactivatesJob() throws Exception {
+		MvcResult created = mockMvc.perform(post("/api/v1/jobs").with(csrf())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"name\":\"Cargo P2\",\"description\":\"Inicial\",\"status\":\"ACTIVE\"}"))
+				.andExpect(status().isCreated()).andReturn();
+		String jobId = idOf(created);
+
+		mockMvc.perform(patch("/api/v1/jobs/{jobId}", jobId).with(csrf())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"name\":\"Cargo P2 Atualizado\",\"description\":\"Revisado\"}"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Cargo P2 Atualizado"))
+				.andExpect(jsonPath("$.description").value("Revisado"));
+		mockMvc.perform(patch("/api/v1/jobs/{jobId}/status", jobId).with(csrf())
+				.contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"INACTIVE\"}"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.status").value("INACTIVE"));
 	}
 
 	@Test
@@ -203,5 +245,12 @@ class OrganizationStructureEndpointTests {
 		mockMvc.perform(patch("/api/v1/units/{id}/status", unit.getId()).with(csrf())
 					.contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"INACTIVE\"}"))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.status").value("INACTIVE"));
+	}
+
+	private String idOf(MvcResult result) throws Exception {
+		String body = result.getResponse().getContentAsString();
+		String marker = "\"id\":\"";
+		int start = body.indexOf(marker) + marker.length();
+		return body.substring(start, body.indexOf('"', start));
 	}
 }
