@@ -21,7 +21,7 @@
 
 ## Commands
 
-- Use the checked-in wrapper and Java 21: `./mvnw ...` (`pom.xml` compiles with `release 21`).
+- Use the checked-in wrapper and Java 21 or newer: `./mvnw ...` (`pom.xml` compiles with `release 21`, which is the minimum compatibility target).
 - Compile and package without starting containers: `./mvnw -DskipTests package`. This still compiles test sources.
 - Run all tests: `./mvnw test`.
 - Run one test class or method: `./mvnw -Dtest=WorkTrainingSystemApplicationTests test` or `./mvnw -Dtest=WorkTrainingSystemApplicationTests#contextLoads test`.
