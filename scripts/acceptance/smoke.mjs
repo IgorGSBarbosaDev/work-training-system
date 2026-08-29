@@ -61,6 +61,22 @@ async function main() {
     const employeeResponse = await api(`/employees/${state.employee.id}`, { token: admin.accessToken, expected: [200] })
     if (!itemsFromPage(units.data).some((item) => item.id === state.unit.id) || !itemsFromPage(sectors.data).some((item) => item.id === state.sector.id) || !itemsFromPage(jobs.data).some((item) => item.id === state.job.id) || employeeResponse.data.id !== state.employee.id) throw new Error('Structure fixture was not persisted')
   })
+  await check('dashboard aggregations, filters and pagination', async () => {
+    const overview = await api(`/admin/dashboard/overview?unitId=${state.unit.id}`, { token: admin.accessToken, expected: [200] })
+    for (const field of ['activeEmployees', 'employeesWithPendingItems', 'employeesWithBlockedActivities']) {
+      if (typeof overview.data?.[field] !== 'number') throw new Error(`Dashboard overview is missing numeric field ${field}`)
+    }
+    for (const view of ['trainings', 'activities', 'employees']) {
+      const response = await api(`/admin/dashboard/${view}?unitId=${state.unit.id}&page=0&size=20`, { token: admin.accessToken, expected: [200] })
+      if (!Array.isArray(response.data?.content) || response.data.content.length === 0) {
+        throw new Error(`Dashboard ${view} did not return the seeded data`)
+      }
+      if (response.data.size !== 20 || response.data.page !== 0) throw new Error(`Dashboard ${view} pagination contract is invalid`)
+    }
+    await api('/admin/dashboard/overview?periodFrom=2026-08-02&periodTo=2026-08-01', { token: admin.accessToken, expected: [400] })
+    const team = await api(`/team/dashboard?unitId=${state.unit.id}`, { token: manager.accessToken, expected: [200] })
+    if (team.data.activeEmployees < 1) throw new Error('Manager dashboard did not preserve the granted unit scope')
+  })
   await check('published training and protected video', async () => {
     const training = await api(`/trainings/${state.training.id}`, { token: admin.accessToken, expected: [200] })
     if (training.data.status !== 'ACTIVE') throw new Error('Training is not active')

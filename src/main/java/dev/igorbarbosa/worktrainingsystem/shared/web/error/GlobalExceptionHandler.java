@@ -21,6 +21,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import dev.igorbarbosa.worktrainingsystem.shared.web.pagination.InvalidPaginationException;
 import dev.igorbarbosa.worktrainingsystem.identity.application.IdentityAuthenticationException;
+import dev.igorbarbosa.worktrainingsystem.reporting.api.InvalidDashboardFilterException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -61,9 +62,9 @@ public class GlobalExceptionHandler {
 				"Um ou mais parâmetros são inválidos.", request, List.of());
 	}
 
-	@ExceptionHandler(InvalidPaginationException.class)
+	@ExceptionHandler({InvalidPaginationException.class, InvalidDashboardFilterException.class})
 	ResponseEntity<ApiError> handleInvalidPagination(
-			InvalidPaginationException exception, HttpServletRequest request) {
+			RuntimeException exception, HttpServletRequest request) {
 		return response(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "VALIDATION_ERROR",
 				exception.getMessage(), request, List.of());
 	}

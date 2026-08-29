@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 public class PaginationFactory {
 
 	public PageRequest create(int page, int size, String sortExpression, Set<String> allowedProperties) {
+		validate(page, size);
 		String[] sortParts = sortExpression.split(",", -1);
 		if (sortParts.length != 2) {
 			throw new InvalidPaginationException("A ordenação deve seguir o formato campo,direção.");
@@ -27,5 +28,10 @@ public class PaginationFactory {
 		} catch (IllegalArgumentException exception) {
 			throw new InvalidPaginationException("A direção deve ser asc ou desc.");
 		}
+	}
+
+	public void validate(int page, int size) {
+		if (page < 0) throw new InvalidPaginationException("A página deve ser maior ou igual a zero.");
+		if (size < 1 || size > 100) throw new InvalidPaginationException("O tamanho da página deve estar entre 1 e 100.");
 	}
 }

@@ -24,8 +24,8 @@ public class AuditLog {
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(nullable = false, updatable = false, columnDefinition = "jsonb") private String details;
 	protected AuditLog() {}
-	public AuditLog(UUID organizationId, AuditPort.AuditRecord record, String requestId, String details) {
-		this.id = UUID.randomUUID(); this.organizationId = organizationId; this.userId = record.actorId();
+	public AuditLog(AuditPort.AuditRecord record, String requestId, String details) {
+		this.id = UUID.randomUUID(); this.organizationId = record.organizationId(); this.userId = record.actorId();
 		this.action = record.action(); this.entityType = record.entityType(); this.entityId = record.entityId();
 		this.occurredAt = record.occurredAt(); this.requestId = requestId; this.details = details;
 	}

@@ -8,8 +8,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-public interface UserRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificationExecutor<User> {
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	Optional<User> findByEmailIgnoreCase(String email);
 	Optional<User> findByIdAndOrganizationId(UUID id, UUID organizationId);

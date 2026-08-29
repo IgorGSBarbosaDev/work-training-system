@@ -15,5 +15,10 @@ public interface SliceBNotificationPort {
 	record ExpirationNotification(UUID organizationId, UUID employeeId, UUID trainingId,
 			UUID completionId, LocalDate expirationDate, String status) {}
 	record QualificationBlockedNotification(UUID organizationId, UUID employeeId, UUID activityId) {}
-	record AssignmentNotification(UUID organizationId, UUID employeeId, UUID assignmentId, UUID trainingId) {}
+	record AssignmentNotification(UUID organizationId, UUID employeeId, UUID assignmentId, UUID trainingId,
+			LocalDate effectiveDate) {
+		public AssignmentNotification(UUID organizationId, UUID employeeId, UUID assignmentId, UUID trainingId) {
+			this(organizationId, employeeId, assignmentId, trainingId, null);
+		}
+	}
 }

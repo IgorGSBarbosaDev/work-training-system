@@ -1017,6 +1017,7 @@ export function OrganizationPage() {
 }
 
 type GenericRecord = Record<string, unknown> & { id: string }
+type ManagementFiltersState = { search: string; status: string; role: string; recipient: string; type: string; action: string; entityType: string; from: string; to: string }
 
 const genericConfigs = {
   certificates: {
@@ -1059,25 +1060,109 @@ const genericConfigs = {
 export function GenericManagementPage({ kind }: { kind: keyof typeof genericConfigs }) {
   const config = genericConfigs[kind]
   const [page, setPage] = useState(0)
-  const state = useApiData<PageResponse<GenericRecord>>(`${config.endpoint}?page=${page}&size=15`)
+  const [filters, setFilters] = useState<ManagementFiltersState>({ search: '', status: '', role: '', recipient: '', type: '', action: '', entityType: '', from: '', to: '' })
+  const [editingUser, setEditingUser] = useState<{ id: string; email: string; role: string; employeeId?: string | null; permissions: string[]; scopes: unknown[] } | null>(null)
+  const [busy, setBusy] = useState('')
+  const state = useApiData<PageResponse<GenericRecord>>(buildManagementPath(kind, config.endpoint, page, filters))
   const Icon = config.icon
+
+  function updateFilter(key: keyof typeof filters, value: string) {
+    setFilters((current) => ({ ...current, [key]: value }))
+    setPage(0)
+  }
+
+  async function action(item: GenericRecord, operation: string) {
+    setBusy(`${item.id}:${operation}`)
+    try {
+      if (kind === 'certificates' && operation === 'download') {
+        const result = await api<{ url: string }>(`/certificates/${item.id}/download`)
+        window.open(result.url, '_blank', 'noopener,noreferrer')
+      } else if (kind === 'certificates' && operation === 'revoke') {
+        const reason = window.prompt('Informe o motivo da revogação:')?.trim()
+        if (!reason) return
+        await api(`/certificates/${item.id}/revoke`, { method: 'POST', body: JSON.stringify({ reason }) })
+        toast.success('Certificado revogado.')
+      } else if (kind === 'certificates' && operation === 'regenerate') {
+        await api(`/certificates/${item.id}/regenerate`, { method: 'POST' })
+        toast.success('Regeneração solicitada.')
+      } else if (kind === 'notifications' && operation === 'read') {
+        await api(`/me/notifications/${item.id}/read`, { method: 'PATCH' })
+        toast.success('Notificação marcada como lida.')
+      } else if (kind === 'notifications' && operation === 'archive') {
+        await api(`/me/notifications/${item.id}/archive`, { method: 'PATCH' })
+        toast.success('Notificação arquivada.')
+      } else if (kind === 'emails' && operation === 'retry') {
+        await api(`/admin/email-deliveries/${item.id}/retry`, { method: 'POST' })
+        toast.success('Entrega reenfileirada com o conteúdo original.')
+      } else if (kind === 'users' && operation === 'reset') {
+        await api(`/users/${item.id}/password-reset`, { method: 'POST' })
+        toast.success('Recuperação de senha solicitada.')
+      } else if (kind === 'users' && operation === 'status') {
+        const status = item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+        await api(`/users/${item.id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) })
+        toast.success(`Usuário ${status === 'ACTIVE' ? 'ativado' : 'inativado'}.`)
+      }
+      state.reload()
+    } catch (reason) {
+      toast.error(apiErrorMessage(reason))
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function editUser(item: GenericRecord) {
+    setBusy(`${item.id}:edit`)
+    try {
+      const permissions = await api<{ permissions: string[]; scopes: unknown[] }>(`/users/${item.id}/permissions`)
+      setEditingUser({ id: item.id, email: String(item.email || ''), role: String(item.role || 'EMPLOYEE'), employeeId: typeof item.employeeId === 'string' ? item.employeeId : null, permissions: permissions.permissions, scopes: permissions.scopes })
+    } catch (reason) { toast.error(apiErrorMessage(reason)) } finally { setBusy('') }
+  }
+
+  async function saveUser(event: FormEvent) {
+    event.preventDefault()
+    if (!editingUser) return
+    setBusy(`${editingUser.id}:save`)
+    try {
+      await api(`/users/${editingUser.id}`, { method: 'PATCH', body: JSON.stringify({ email: editingUser.email, role: editingUser.role, employeeId: editingUser.employeeId || null }) })
+      await api(`/users/${editingUser.id}/permissions`, { method: 'PATCH', body: JSON.stringify({ permissions: editingUser.permissions, scopes: editingUser.scopes }) })
+      toast.success('Usuário e permissões atualizados.')
+      setEditingUser(null)
+      state.reload()
+    } catch (reason) { toast.error(apiErrorMessage(reason)) } finally { setBusy('') }
+  }
 
   return (
     <div>
       <PageHeader eyebrow={config.eyebrow} title={config.title} description={config.description} />
+      <ManagementFilters kind={kind} filters={filters} update={updateFilter} />
       {state.loading ? <LoadingState /> : state.error ? <ErrorState message={state.error} retry={state.reload} /> : !state.data?.content.length ? (
-        <EmptyState icon={Icon} title={`Nenhum registro em ${config.title.toLocaleLowerCase('pt-BR')}`} />
+        <EmptyState icon={Icon} title={`Nenhum registro em ${config.title.toLocaleLowerCase('pt-BR')}`} description="Ajuste os filtros ou aguarde novos eventos." />
       ) : (
         <>
           <div className="panel divide-y divide-border">
             {state.data.content.map((item) => (
-              <div key={item.id} className="flex flex-wrap items-center gap-4 p-4">
-                <span className="grid size-9 place-items-center bg-muted text-primary"><Icon size={17} /></span>
-                <span className="min-w-52 flex-1">
-                  <strong className="block break-all text-sm">{primaryText(item)}</strong>
-                  <span className="mt-1 block break-all text-xs text-muted-foreground">{secondaryText(item)}</span>
-                </span>
-                {typeof item.status === 'string' && <StatusBadge value={item.status} />}
+              <div key={item.id}>
+                <div className="flex flex-wrap items-start gap-4 p-4">
+                  <span className="grid size-9 shrink-0 place-items-center bg-muted text-primary"><Icon size={17} /></span>
+                  <span className="min-w-0 flex-1">
+                    <strong className="block break-words text-sm">{primaryText(item)}</strong>
+                    <span className="mt-1 block break-words text-xs text-muted-foreground">{secondaryText(item)}</span>
+                    {kind === 'audit' && typeof item.details === 'string' && <code className="mt-3 block max-h-32 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs">{formatAuditDetails(item.details)}</code>}
+                    {kind === 'emails' && typeof item.lastError === 'string' && item.lastError && <p className="mt-2 text-xs text-destructive">Falha: {item.lastError}</p>}
+                  </span>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {typeof item.status === 'string' && <StatusBadge value={item.status} />}
+                    <ManagementActions kind={kind} item={item} busy={busy.startsWith(`${item.id}:`)} action={action} editUser={editUser} />
+                  </div>
+                </div>
+                {kind === 'users' && editingUser?.id === item.id && (
+                  <form onSubmit={saveUser} className="grid gap-4 border-t border-border bg-muted/50 p-4 sm:grid-cols-2" aria-label={`Editar ${editingUser.email}`}>
+                    <FormField label="E-mail" type="email" value={editingUser.email} onChange={(email) => setEditingUser({ ...editingUser, email })} />
+                    <SelectNative label="Perfil" value={editingUser.role} onChange={(role) => setEditingUser({ ...editingUser, role })} options={['ADMIN','MANAGER','SUPERVISOR','EMPLOYEE'].map((value) => [value, value])} />
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editingUser.permissions.includes('ASSIGN_TRAINING')} onChange={(event) => setEditingUser({ ...editingUser, permissions: event.target.checked ? ['ASSIGN_TRAINING'] : [] })} /> Permitir atribuição de treinamentos</label>
+                    <div className="flex justify-end gap-2 sm:col-span-2"><Button type="button" variant="ghost" onClick={() => setEditingUser(null)}>Cancelar</Button><Button disabled={busy.endsWith(':save')}>{busy.endsWith(':save') ? <InlineLoading label="Salvando" /> : <><Save size={15} /> Salvar</>}</Button></div>
+                  </form>
+                )}
               </div>
             ))}
           </div>
@@ -1087,6 +1172,49 @@ export function GenericManagementPage({ kind }: { kind: keyof typeof genericConf
     </div>
   )
 }
+
+export function buildManagementPath(kind: keyof typeof genericConfigs, endpoint: string, page: number, filters: Record<string, string>) {
+  const query = new URLSearchParams({ page: String(page), size: '15' })
+  const allowed: Record<keyof typeof genericConfigs, string[]> = {
+    users: ['search', 'role', 'status'], certificates: ['type', 'status', 'issuedFrom', 'issuedTo'],
+    emails: ['status', 'recipient', 'createdFrom', 'createdTo'], audit: ['action', 'entityType', 'occurredFrom', 'occurredTo'], notifications: [],
+  }
+  const aliases: Record<string, string> = { from: kind === 'certificates' ? 'issuedFrom' : kind === 'emails' ? 'createdFrom' : 'occurredFrom', to: kind === 'certificates' ? 'issuedTo' : kind === 'emails' ? 'createdTo' : 'occurredTo' }
+  Object.entries(filters).forEach(([key, value]) => {
+    const target = aliases[key] || key
+    if (value && allowed[kind].includes(target)) {
+			const normalized = kind !== 'certificates' && (key === 'from' || key === 'to') ? new Date(value).toISOString() : value
+			query.set(target, normalized)
+		}
+  })
+  return `${endpoint}?${query}`
+}
+
+function ManagementFilters({ kind, filters, update }: { kind: keyof typeof genericConfigs; filters: ManagementFiltersState; update: (key: keyof ManagementFiltersState, value: string) => void }) {
+  if (kind === 'notifications') return null
+  return (
+    <section className="panel mb-5 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Filtros da listagem">
+      {kind === 'users' && <><FormField label="Buscar e-mail" value={filters.search} onChange={(value) => update('search', value)} required={false} /><SelectNative label="Perfil" value={filters.role} onChange={(value) => update('role', value)} options={[['','Todos'],...['ADMIN','MANAGER','SUPERVISOR','EMPLOYEE'].map((value) => [value,value] as [string,string])]} /></>}
+      {kind === 'emails' && <FormField label="Destinatário" value={filters.recipient} onChange={(value) => update('recipient', value)} required={false} />}
+      {kind === 'audit' && <><FormField label="Ação" value={filters.action} onChange={(value) => update('action', value)} required={false} /><FormField label="Tipo de entidade" value={filters.entityType} onChange={(value) => update('entityType', value)} required={false} /></>}
+      {kind === 'certificates' && <SelectNative label="Tipo" value={filters.type} onChange={(value) => update('type', value)} options={[['','Todos'],['INTERNAL','Interno'],['EXTERNAL','Externo']]} />}
+      {kind !== 'audit' && <SelectNative label="Situação" value={filters.status} onChange={(value) => update('status', value)} options={[['','Todas'], ...(kind === 'emails' ? [['PENDING','Pendente'],['SENT','Enviado'],['FAILED','Falhou']] : kind === 'certificates' ? [['ACTIVE','Ativo'],['REVOKED','Revogado']] : [['ACTIVE','Ativo'],['INACTIVE','Inativo'],['BLOCKED','Bloqueado']]) as Array<[string,string]>]} />}
+      {(kind === 'certificates' || kind === 'emails' || kind === 'audit') && <><FormField label="De" type={kind === 'certificates' ? 'date' : 'datetime-local'} value={filters.from} onChange={(value) => update('from', toApiInstant(kind, value))} required={false} /><FormField label="Até" type={kind === 'certificates' ? 'date' : 'datetime-local'} value={filters.to} onChange={(value) => update('to', toApiInstant(kind, value))} required={false} /></>}
+    </section>
+  )
+}
+
+function toApiInstant(_kind: keyof typeof genericConfigs, value: string) { return value }
+
+function ManagementActions({ kind, item, busy, action, editUser }: { kind: keyof typeof genericConfigs; item: GenericRecord; busy: boolean; action: (item: GenericRecord, operation: string) => void; editUser: (item: GenericRecord) => void }) {
+  if (kind === 'audit') return null
+  if (kind === 'certificates') return <><Button variant="outline" disabled={busy} onClick={() => action(item, 'download')}><Download size={15} /> Baixar</Button>{item.status !== 'REVOKED' && <Button variant="danger" disabled={busy} onClick={() => action(item, 'revoke')}>Revogar</Button>}<Button variant="outline" disabled={busy} onClick={() => action(item, 'regenerate')}><RefreshCw size={15} /> Regenerar</Button></>
+  if (kind === 'notifications') return <>{!item.readAt && <Button variant="outline" disabled={busy} onClick={() => action(item, 'read')}>Marcar lida</Button>}<Button variant="ghost" disabled={busy} onClick={() => action(item, 'archive')}><Archive size={15} /> Arquivar</Button></>
+  if (kind === 'emails') return item.status === 'FAILED' ? <Button variant="outline" disabled={busy} onClick={() => action(item, 'retry')}><RefreshCw size={15} /> Reenviar</Button> : null
+  return <><Button variant="outline" disabled={busy} onClick={() => editUser(item)}><UserCog size={15} /> Editar</Button><Button variant="outline" disabled={busy} onClick={() => action(item, 'reset')}><KeyRound size={15} /> Recuperar senha</Button><Button variant={item.status === 'ACTIVE' ? 'danger' : 'outline'} disabled={busy} onClick={() => action(item, 'status')}>{item.status === 'ACTIVE' ? 'Inativar' : 'Ativar'}</Button></>
+}
+
+function formatAuditDetails(value: string) { try { return JSON.stringify(JSON.parse(value), null, 2) } catch { return value } }
 
 export function ReportsPage({ team = false }: { team?: boolean }) {
   const [report, setReport] = useState<'training-status' | 'qualifications' | 'expirations'>('training-status')

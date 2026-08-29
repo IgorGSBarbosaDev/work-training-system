@@ -1,7 +1,5 @@
 package dev.igorbarbosa.worktrainingsystem.identity.application;
 
-import static dev.igorbarbosa.worktrainingsystem.shared.persistence.OrganizationScope.DEFAULT_ORGANIZATION_ID;
-
 import dev.igorbarbosa.worktrainingsystem.identity.api.IdentityDtos.CreateUserRequest;
 import dev.igorbarbosa.worktrainingsystem.identity.api.IdentityDtos.PermissionsResponse;
 import dev.igorbarbosa.worktrainingsystem.identity.api.IdentityDtos.ScopeGrantRequest;
@@ -30,6 +28,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,7 +62,7 @@ public class UserAdministrationService {
 	public UserResponse create(CreateUserRequest request) {
 		ensureEmailAvailable(request.email(), null);
 		validateEmployeeLink(request.role(), request.employeeId());
-		User user = users.save(new User(DEFAULT_ORGANIZATION_ID, request.email(),
+		User user = users.save(new User(organizationId(), request.email(),
 				passwordEncoder.encode(opaqueTokens.generate()), request.role(), UserStatus.ACTIVE,
 				request.employeeId(), clock.instant()));
 		if (request.sendActivationEmail()) authenticationService.requestResetFor(user);
@@ -75,8 +74,15 @@ public class UserAdministrationService {
 	public UserResponse get(UUID id) { return response(find(id)); }
 
 	@Transactional(readOnly = true)
-	public Page<UserResponse> list(Pageable pageable) {
-		return users.findAllByOrganizationId(DEFAULT_ORGANIZATION_ID, pageable).map(this::response);
+	public Page<UserResponse> list(String search, UserRole role, UserStatus status, Pageable pageable) {
+		Specification<User> specification = (root, query, builder) -> builder.equal(root.get("organizationId"), organizationId());
+		if (search != null && !search.isBlank()) {
+			String pattern = "%" + search.trim().toLowerCase() + "%";
+			specification = specification.and((root, query, builder) -> builder.like(builder.lower(root.get("email")), pattern));
+		}
+		if (role != null) specification = specification.and((root, query, builder) -> builder.equal(root.get("role"), role));
+		if (status != null) specification = specification.and((root, query, builder) -> builder.equal(root.get("status"), status));
+		return users.findAll(specification, pageable).map(this::response);
 	}
 
 	@Transactional
@@ -137,9 +143,9 @@ public class UserAdministrationService {
 		if (distinct != values.size()) throw new BusinessRuleViolationException("DUPLICATE_SCOPE", "O mesmo escopo foi informado mais de uma vez.");
 		values.forEach(value -> {
 			boolean exists = switch (value.type()) {
-				case UNIT -> organization.unitExists(DEFAULT_ORGANIZATION_ID, value.targetId());
-				case SECTOR -> organization.sectorExists(DEFAULT_ORGANIZATION_ID, value.targetId());
-				case EMPLOYEE -> employees.findScope(DEFAULT_ORGANIZATION_ID, value.targetId()).isPresent();
+				case UNIT -> organization.unitExists(organizationId(), value.targetId());
+				case SECTOR -> organization.sectorExists(organizationId(), value.targetId());
+				case EMPLOYEE -> employees.findScope(organizationId(), value.targetId()).isPresent();
 			};
 			if (!exists) throw new ResourceNotFoundException("O alvo do escopo informado não existe na organização.");
 		});
@@ -149,7 +155,7 @@ public class UserAdministrationService {
 		if (role == UserRole.EMPLOYEE && employeeId == null) {
 			throw new BusinessRuleViolationException("EMPLOYEE_LINK_REQUIRED", "O perfil EMPLOYEE exige um colaborador vinculado.");
 		}
-		if (employeeId != null) employees.findScope(DEFAULT_ORGANIZATION_ID, employeeId)
+		if (employeeId != null) employees.findScope(organizationId(), employeeId)
 				.orElseThrow(() -> new ResourceNotFoundException("Colaborador não encontrado."));
 	}
 
@@ -160,7 +166,7 @@ public class UserAdministrationService {
 	}
 
 	private User find(UUID id) {
-		return users.findByIdAndOrganizationId(id, DEFAULT_ORGANIZATION_ID)
+		return users.findByIdAndOrganizationId(id, organizationId())
 				.orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 	}
 
@@ -172,7 +178,10 @@ public class UserAdministrationService {
 	}
 
 	private void audit(String action, User target, Map<String, String> details) {
-		audit.record(new AuditRecord(currentUserProvider.requireCurrentUser().userId(), action, "USER", target.getId(),
+		var actor = currentUserProvider.requireCurrentUser();
+		audit.record(new AuditRecord(actor.organizationId(), actor.userId(), action, "USER", target.getId(),
 				clock.instant(), details));
 	}
+
+	private UUID organizationId() { return currentUserProvider.requireCurrentUser().organizationId(); }
 }

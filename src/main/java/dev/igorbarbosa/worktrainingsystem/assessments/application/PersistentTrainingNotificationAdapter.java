@@ -1,7 +1,5 @@
 package dev.igorbarbosa.worktrainingsystem.assessments.application;
 
-import static dev.igorbarbosa.worktrainingsystem.shared.persistence.OrganizationScope.DEFAULT_ORGANIZATION_ID;
-
 import dev.igorbarbosa.worktrainingsystem.assessments.persistence.AssessmentAttemptRepository;
 import dev.igorbarbosa.worktrainingsystem.assessments.persistence.TrainingCompletionRepository;
 import dev.igorbarbosa.worktrainingsystem.notifications.application.SliceBNotificationPort;
@@ -23,16 +21,15 @@ class PersistentTrainingNotificationAdapter implements TrainingNotificationPort 
 	@Override
 	public void outcomeRecorded(TrainingOutcomeEvent event) {
 		if (event.completionId() != null) {
-			completions.findByIdAndOrganizationId(event.completionId(), DEFAULT_ORGANIZATION_ID)
-					.map(completion -> completion.getSourceAssignmentId())
-					.ifPresent(assignmentId -> notifications.trainingCompleted(
-							new SliceBNotificationPort.AssignmentNotification(DEFAULT_ORGANIZATION_ID,
-									event.employeeId(), assignmentId, event.trainingId())));
+			completions.findById(event.completionId()).ifPresent(completion ->
+				notifications.trainingCompleted(new SliceBNotificationPort.AssignmentNotification(
+						completion.getOrganizationId(), event.employeeId(), completion.getSourceAssignmentId(),
+						event.trainingId())));
 		}
 		if (event.failedAttemptId() != null) {
-			attempts.findByIdAndOrganizationId(event.failedAttemptId(), DEFAULT_ORGANIZATION_ID)
+			attempts.findById(event.failedAttemptId())
 					.ifPresent(attempt -> notifications.assessmentFailed(
-							new SliceBNotificationPort.AssignmentNotification(DEFAULT_ORGANIZATION_ID,
+							new SliceBNotificationPort.AssignmentNotification(attempt.getOrganizationId(),
 									event.employeeId(), attempt.getAssignmentId(), event.trainingId())));
 		}
 	}

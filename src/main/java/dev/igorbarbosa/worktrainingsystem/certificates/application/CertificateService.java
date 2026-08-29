@@ -1,6 +1,5 @@
 package dev.igorbarbosa.worktrainingsystem.certificates.application;
 
-import static dev.igorbarbosa.worktrainingsystem.shared.persistence.OrganizationScope.DEFAULT_ORGANIZATION_ID;
 
 import dev.igorbarbosa.worktrainingsystem.assessments.application.TrainingOutcomeEvent;
 import dev.igorbarbosa.worktrainingsystem.assessments.domain.TrainingCompletion;
@@ -34,6 +33,7 @@ import java.io.ByteArrayOutputStream;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.Set;
@@ -99,8 +99,23 @@ public class CertificateService {
 	}
 
 	@Transactional(readOnly = true)
-	public Page<CertificateResponse> list(Pageable pageable) {
-		return certificates.findAll(visible(), pageable).map(this::response);
+	public Page<CertificateResponse> list(UUID employeeId, UUID trainingId, CertificateType type,
+			CertificateStatus status, LocalDate issuedFrom, LocalDate issuedTo, Pageable pageable) {
+		Specification<Certificate> specification = visible();
+		if (type != null) specification = specification.and((root, query, builder) -> builder.equal(root.get("type"), type));
+		if (status != null) specification = specification.and((root, query, builder) -> builder.equal(root.get("status"), status));
+		if (issuedFrom != null) specification = specification.and((root, query, builder) -> builder.greaterThanOrEqualTo(root.get("issuedDate"), issuedFrom));
+		if (issuedTo != null) specification = specification.and((root, query, builder) -> builder.lessThanOrEqualTo(root.get("issuedDate"), issuedTo));
+		if (employeeId != null || trainingId != null) specification = specification.and((root, query, builder) -> {
+			var subquery = query.subquery(UUID.class); var completion = subquery.from(TrainingCompletion.class);
+			var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+			predicates.add(builder.equal(completion.get("organizationId"), currentUser.requireCurrentUser().organizationId()));
+			if (employeeId != null) predicates.add(builder.equal(completion.get("employeeId"), employeeId));
+			if (trainingId != null) predicates.add(builder.equal(completion.get("trainingId"), trainingId));
+			subquery.select(completion.get("id")).where(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+			return root.get("completionId").in(subquery);
+		});
+		return certificates.findAll(specification, pageable).map(this::response);
 	}
 
 	@Transactional(readOnly = true)
@@ -126,7 +141,7 @@ public class CertificateService {
 	@Transactional
 	public CertificateJobResponse regenerate(UUID id) {
 		requireAdmin();
-		Certificate old = certificates.findByIdAndOrganizationId(id, DEFAULT_ORGANIZATION_ID)
+		Certificate old = certificates.findByIdAndOrganizationId(id, currentUser.requireCurrentUser().organizationId())
 				.orElseThrow(() -> missing(id));
 		var userId = currentUser.requireCurrentUser().userId();
 		old.revoke(userId, "regenerated", clock.instant());
@@ -137,13 +152,13 @@ public class CertificateService {
 	public CertificateResponse revoke(UUID id, String reason) {
 		requireAdmin();
 		var userId = currentUser.requireCurrentUser().userId();
-		Certificate value = certificates.findByIdAndOrganizationId(id, DEFAULT_ORGANIZATION_ID)
+		Certificate value = certificates.findByIdAndOrganizationId(id, currentUser.requireCurrentUser().organizationId())
 				.orElseThrow(() -> missing(id));
 		Instant now = clock.instant();
 		value.revoke(userId, reason, now);
-		history.save(new CertificateHistory(DEFAULT_ORGANIZATION_ID, id, CertificateHistoryType.REVOKED,
+		history.save(new CertificateHistory(value.getOrganizationId(), id, CertificateHistoryType.REVOKED,
 				userId, null, reason, now));
-		audit.record(new AuditPort.AuditRecord(userId, "CERTIFICATE_REVOKED", "CERTIFICATE", id, now,
+		audit.record(new AuditPort.AuditRecord(value.getOrganizationId(), userId, "CERTIFICATE_REVOKED", "CERTIFICATE", id, now,
 				Map.of("reason", reason)));
 		return response(value);
 	}
@@ -160,7 +175,7 @@ public class CertificateService {
 		Certificate value = certificates.findByValidationCode(code)
 				.orElseThrow(() -> new ResourceNotFoundException("O código de validação não existe."));
 		TrainingCompletion completion = completions.findByIdAndOrganizationId(value.getCompletionId(),
-				DEFAULT_ORGANIZATION_ID).orElseThrow();
+				value.getOrganizationId()).orElseThrow();
 		var training = trainings.summary(completion.getTrainingId());
 		var employee = employees.requireEmployee(completion.getEmployeeId());
 		return new CertificateValidationResponse(value.getStatus() == CertificateStatus.ACTIVE,
@@ -172,50 +187,50 @@ public class CertificateService {
 	public CertificateResponse external(UUID completionId, ExternalCertificateRequest request) {
 		var user = currentUser.requireCurrentUser();
 		TrainingCompletion completion = completions.findByIdAndOrganizationId(completionId,
-				DEFAULT_ORGANIZATION_ID).orElseThrow(() -> new ResourceNotFoundException("A conclusão não existe."));
+				user.organizationId()).orElseThrow(() -> new ResourceNotFoundException("A conclusão não existe."));
 		if (user.role() != dev.igorbarbosa.worktrainingsystem.identity.domain.UserRole.ADMIN
 				|| !authorization.canAccessEmployee(completion.getEmployeeId())) {
 			throw new AccessDeniedException("Acesso restrito ao administrador.");
 		}
 		var ref = files.requireExternalCertificate(request.fileId(), completion.getEmployeeId());
-		Certificate value = new Certificate(DEFAULT_ORGANIZATION_ID, completionId, CertificateType.EXTERNAL,
+		Certificate value = new Certificate(user.organizationId(), completionId, CertificateType.EXTERNAL,
 				token(), ref.objectKey(), clock.instant(), user.userId(), null,
-				certificates.countByOrganizationIdAndCompletionIdAndType(DEFAULT_ORGANIZATION_ID, completionId,
+				certificates.countByOrganizationIdAndCompletionIdAndType(user.organizationId(), completionId,
 						CertificateType.EXTERNAL) + 1);
 		certificates.save(value);
-		history.save(new CertificateHistory(DEFAULT_ORGANIZATION_ID, value.getId(), CertificateHistoryType.ISSUED,
+		history.save(new CertificateHistory(user.organizationId(), value.getId(), CertificateHistoryType.ISSUED,
 				user.userId(), null, "external", value.getIssuedAt()));
 		return response(value);
 	}
 
 	private CertificateJobResponse generateInternal(UUID completionId, UUID actor, Certificate replaces) {
-		TrainingCompletion completion = completions.findByIdAndOrganizationId(completionId, DEFAULT_ORGANIZATION_ID)
-				.orElseThrow();
-		var active = certificates.findByOrganizationIdAndCompletionIdAndTypeAndStatus(DEFAULT_ORGANIZATION_ID,
+		TrainingCompletion completion = completions.findById(completionId).orElseThrow();
+		UUID organizationId = completion.getOrganizationId();
+		var active = certificates.findByOrganizationIdAndCompletionIdAndTypeAndStatus(organizationId,
 				completionId, CertificateType.INTERNAL, CertificateStatus.ACTIVE);
 		if (replaces == null && active.isPresent()) {
 			return new CertificateJobResponse(UUID.randomUUID(), completionId, CertificateGenerationStatus.COMPLETED,
 					0, null, active.get().getId(), active.get().getIssuedAt());
 		}
 		Instant now = clock.instant();
-		CertificateGenerationJob job = jobs.save(new CertificateGenerationJob(DEFAULT_ORGANIZATION_ID, completionId,
+		CertificateGenerationJob job = jobs.save(new CertificateGenerationJob(organizationId, completionId,
 				CertificateType.INTERNAL, actor, replaces == null ? null : replaces.getId(), now));
 		job.processing(now);
 		var training = trainings.summary(completion.getTrainingId());
 		var employee = employees.requireEmployee(completion.getEmployeeId());
-		String key = "organizations/%s/certificates/%s.pdf".formatted(DEFAULT_ORGANIZATION_ID, UUID.randomUUID());
+		String key = "organizations/%s/certificates/%s.pdf".formatted(organizationId, UUID.randomUUID());
 		byte[] pdf = pdf(completion, training.name(), employee.name(), employee.registration());
 		storage.upload(key, new ByteArrayInputStream(pdf), pdf.length, "application/pdf");
-		int generation = certificates.countByOrganizationIdAndCompletionIdAndType(DEFAULT_ORGANIZATION_ID,
+		int generation = certificates.countByOrganizationIdAndCompletionIdAndType(organizationId,
 				completionId, CertificateType.INTERNAL) + 1;
-		Certificate value = new Certificate(DEFAULT_ORGANIZATION_ID, completionId, CertificateType.INTERNAL, token(), key,
+		Certificate value = new Certificate(organizationId, completionId, CertificateType.INTERNAL, token(), key,
 				now, actor, replaces == null ? null : replaces.getId(), generation);
 		certificates.save(value);
-		history.save(new CertificateHistory(DEFAULT_ORGANIZATION_ID, value.getId(),
+		history.save(new CertificateHistory(organizationId, value.getId(),
 				replaces == null ? CertificateHistoryType.ISSUED : CertificateHistoryType.REGENERATED, actor,
 				replaces == null ? null : replaces.getId(), null, now));
 		job.completed(value.getId(), now);
-		audit.record(new AuditPort.AuditRecord(actor, "CERTIFICATE_ISSUED", "CERTIFICATE", value.getId(), now,
+		audit.record(new AuditPort.AuditRecord(completion.getOrganizationId(), actor, "CERTIFICATE_ISSUED", "CERTIFICATE", value.getId(), now,
 				Map.of("type", "INTERNAL")));
 		return new CertificateJobResponse(job.getId(), completionId, job.getStatus(), job.getAttemptCount(),
 				job.getLastError(), value.getId(), now);
@@ -255,21 +270,21 @@ public class CertificateService {
 	}
 
 	private UUID responsible(UUID completionId) {
-		TrainingCompletion completion = completions.findByIdAndOrganizationId(completionId, DEFAULT_ORGANIZATION_ID)
+		TrainingCompletion completion = completions.findById(completionId)
 				.orElseThrow();
 		if (completion.getResponsibleUserId() != null) return completion.getResponsibleUserId();
 		if (completion.getSourceAssignmentId() != null) {
-			return assignments.findByIdAndOrganizationId(completion.getSourceAssignmentId(), DEFAULT_ORGANIZATION_ID)
+			return assignments.findByIdAndOrganizationId(completion.getSourceAssignmentId(), completion.getOrganizationId())
 					.orElseThrow().getResponsibleUserId();
 		}
 		throw new IllegalStateException("Completion has no certificate responsible user");
 	}
 
 	private Certificate requireVisible(UUID id) {
-		Certificate value = certificates.findByIdAndOrganizationId(id, DEFAULT_ORGANIZATION_ID)
+		UUID organizationId = currentUser.requireCurrentUser().organizationId();
+		Certificate value = certificates.findByIdAndOrganizationId(id, organizationId)
 				.orElseThrow(() -> missing(id));
-		TrainingCompletion completion = completions.findByIdAndOrganizationId(value.getCompletionId(),
-				DEFAULT_ORGANIZATION_ID).orElseThrow();
+		TrainingCompletion completion = completions.findByIdAndOrganizationId(value.getCompletionId(), organizationId).orElseThrow();
 		if (!authorization.canAccessEmployee(completion.getEmployeeId())
 				&& currentUser.requireCurrentUser().role() != dev.igorbarbosa.worktrainingsystem.identity.domain.UserRole.ADMIN) {
 			throw new AccessDeniedException("Certificado fora do escopo autorizado.");
@@ -280,7 +295,7 @@ public class CertificateService {
 	private Specification<Certificate> visible() {
 		var scope = authorization.currentScope();
 		Specification<Certificate> spec = (root, query, builder) -> builder.equal(root.get("organizationId"),
-				DEFAULT_ORGANIZATION_ID);
+				scope.organizationId());
 		if (scope.admin()) return spec;
 		if (scope.employee()) {
 			return spec.and((root, query, builder) -> {

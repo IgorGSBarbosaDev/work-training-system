@@ -126,14 +126,16 @@ async function mailpitMessages() {
   return response.data?.messages ?? response.data?.Messages ?? response.data?.items ?? []
 }
 
-export async function waitForMailpitMessage(recipient, { timeoutMs = 30_000 } = {}) {
+export async function waitForMailpitMessage(recipient, { timeoutMs = 30_000, subject } = {}) {
   return waitFor(`Mailpit message for ${recipient}`, async () => {
     const summaries = await mailpitMessages()
     const message = summaries.find((summary) => {
       const address = summary?.To?.[0]?.Address ?? summary?.to?.[0]?.address ?? summary?.recipient
       return address?.toLowerCase() === recipient.toLowerCase()
     })
-    return message ? { id: messageId(message), subject: summarySubject(message), recipient } : null
+    return message && (!subject || summarySubject(message) === subject)
+      ? { id: messageId(message), subject: summarySubject(message), recipient }
+      : null
   }, { timeoutMs, intervalMs: 500 })
 }
 

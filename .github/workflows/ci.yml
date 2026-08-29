@@ -41,6 +41,7 @@ jobs:
           name: backend-surefire-reports-java-${{ matrix.java-version }}
           path: '**/target/surefire-reports/**'
           if-no-files-found: ignore
+          retention-days: 14
 
   frontend:
     name: Frontend tests and build
@@ -64,6 +65,9 @@ jobs:
 
       - name: Run frontend tests
         run: npm test -- --run
+
+      - name: Lint frontend
+        run: npm run lint
 
       - name: Audit frontend dependencies
         run: npm audit --audit-level=high
@@ -112,12 +116,12 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Prepare acceptance evidence directory
+        run: mkdir -p acceptance-artifacts
+
       - name: Verify toolchain
         shell: bash
         run: ./scripts/check-environment.sh
-
-      - name: Prepare acceptance evidence directory
-        run: mkdir -p acceptance-artifacts
 
       - name: Start isolated Compose environment
         run: docker compose up --build --detach
@@ -141,6 +145,9 @@ jobs:
       - name: Run API smoke test
         run: node scripts/acceptance/smoke.mjs
 
+      - name: Prove SMTP retry transition
+        run: node scripts/acceptance/smtp-retry.mjs
+
       - name: Install Playwright browser
         working-directory: frontend
         run: |
@@ -151,11 +158,17 @@ jobs:
         working-directory: frontend
         run: npm run e2e
 
+      - name: Write acceptance manifest
+        if: always()
+        run: node scripts/acceptance/acceptance-manifest.mjs
+
       - name: Collect service logs on failure
         if: failure()
+        continue-on-error: true
         run: |
-          docker compose ps > acceptance-artifacts/compose-ps.txt
-          docker compose logs --no-color > acceptance-artifacts/compose.log
+          mkdir -p acceptance-artifacts
+          docker compose ps > acceptance-artifacts/compose-ps.txt 2>&1 || true
+          docker compose logs --no-color > acceptance-artifacts/compose.log 2>&1 || true
 
       - name: Upload acceptance evidence
         if: always()
@@ -167,6 +180,7 @@ jobs:
             frontend/test-results/
             frontend/playwright-report/
           if-no-files-found: ignore
+          retention-days: 30
 
       - name: Stop isolated Compose environment
         if: always()

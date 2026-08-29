@@ -30,15 +30,15 @@ public class EmailDeliveryDispatcher {
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void dispatch(EmailDeliveryQueued event) {
 		deliveries.findByIdAndOrganizationId(event.deliveryId(), event.organizationId())
-				.ifPresent(delivery -> send(delivery, event.message()));
+				.ifPresent(this::send);
 	}
 
-	private void send(EmailDelivery delivery, String message) {
+	private void send(EmailDelivery delivery) {
 		try {
 			var mail = new SimpleMailMessage();
 			mail.setTo(delivery.getRecipient());
 			mail.setSubject(delivery.getSubject());
-			mail.setText(message);
+			mail.setText(delivery.getBody());
 			mailSender.send(mail);
 			delivery.sent(clock.instant());
 		} catch (RuntimeException exception) {
@@ -47,9 +47,8 @@ public class EmailDeliveryDispatcher {
 	}
 
 	private String safeError(RuntimeException exception) {
-		String message = exception.getMessage();
-		return message == null ? exception.getClass().getSimpleName() : message.substring(0, Math.min(message.length(), 1000));
+		return "Falha SMTP: " + exception.getClass().getSimpleName();
 	}
 
-	public record EmailDeliveryQueued(UUID organizationId, UUID deliveryId, String message) {}
+	public record EmailDeliveryQueued(UUID organizationId, UUID deliveryId) {}
 }

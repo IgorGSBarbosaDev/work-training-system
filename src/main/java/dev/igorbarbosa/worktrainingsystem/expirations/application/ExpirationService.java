@@ -176,7 +176,7 @@ public class ExpirationService {
 		Recertification saved = recertifications.saveAndFlush(new Recertification(DEFAULT_ORGANIZATION_ID,
 				completionId, assignmentId, trigger, actor, now));
 		qualifications.recalculateEmployee(completion.getEmployeeId());
-		audit.record(new AuditPort.AuditRecord(actor, "RECERTIFICATION_CREATED", "RECERTIFICATION", saved.getId(),
+		audit.record(new AuditPort.AuditRecord(completion.getOrganizationId(), actor, "RECERTIFICATION_CREATED", "RECERTIFICATION", saved.getId(),
 				now, Map.of("trigger", trigger.name(), "completionId", completionId.toString())));
 		return saved;
 	}

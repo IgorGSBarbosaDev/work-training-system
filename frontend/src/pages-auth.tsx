@@ -86,11 +86,11 @@ export function LoginPage() {
 
   const returnPath = (() => {
     const from = (location.state as { from?: unknown } | null)?.from
-    return typeof from === 'string' && from.startsWith('/verificar/') ? from : null
+		return typeof from === 'string' && from.startsWith('/') && !from.startsWith('//') ? from : null
   })()
 
   if (session) {
-    const destination = session.user.role !== 'EMPLOYEE' && returnPath ? returnPath : homeForRole(session.user.role)
+		const destination = returnPath || homeForRole(session.user.role)
     return <Navigate to={destination} replace />
   }
 
@@ -100,7 +100,7 @@ export function LoginPage() {
     setLoading(true)
     try {
       const next = await signIn(email.trim(), password)
-      navigate(next.user.role === 'EMPLOYEE' || !returnPath ? homeForRole(next.user.role) : returnPath, { replace: true })
+		navigate(returnPath || homeForRole(next.user.role), { replace: true })
       toast.success('Acesso realizado com segurança.')
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Não foi possível entrar.')
