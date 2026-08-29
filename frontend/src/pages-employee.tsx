@@ -788,7 +788,7 @@ export function MyQrCodePage() {
           <>
             <div className="mx-auto mt-7 w-fit bg-white p-5 shadow-inner">
               <QRCodeSVG
-                value={state.data.token}
+                value={state.data.verificationUrl}
                 size={220}
                 level="M"
                 title="QR Code individual do colaborador"

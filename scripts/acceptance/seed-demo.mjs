@@ -45,6 +45,17 @@ async function ensureUser({ email, password, role, employeeId, adminToken }) {
   return user
 }
 
+async function ensureManagerScope(userId, unitId, adminToken) {
+  const current = await api(`/users/${userId}/permissions`, { token: adminToken, expected: [200] })
+  const scopes = current.data?.scopes ?? []
+  if (scopes.some((scope) => scope.type === 'UNIT' && scope.targetId === unitId)) return
+  await api(`/users/${userId}/permissions`, {
+    method: 'PATCH', token: adminToken,
+    body: { permissions: current.data?.permissions ?? [], scopes: [...scopes, { type: 'UNIT', targetId: unitId }] },
+    expected: [200],
+  })
+}
+
 async function ensureTraining(adminToken) {
   const code = 'ACCEPTANCE-TRAINING'
   const existing = (await listAll('/trainings', adminToken)).find((training) => training.code === code)
@@ -245,6 +256,7 @@ async function main() {
 
   const managerUser = await ensureUser({ email: managerEmail, password: managerPassword, role: 'MANAGER', employeeId: null, adminToken: admin.accessToken })
   const employeeUser = await ensureUser({ email: employeeEmail, password: employeePassword, role: 'EMPLOYEE', employeeId: employee.id, adminToken: admin.accessToken })
+  await ensureManagerScope(managerUser.id, unit.id, admin.accessToken)
   const trainingData = await ensureTraining(admin.accessToken)
   const automatic = await ensureAutomaticScenario(admin.accessToken, job, employee.id, trainingData.video)
   const assignmentBody = {
@@ -265,7 +277,7 @@ async function main() {
     generatedAt: new Date().toISOString(),
     admin: { email: adminEmail }, manager: { id: managerUser.id, email: managerEmail }, employee: { id: employee.id, userId: employeeUser.id, email: employeeEmail },
     unit: { id: unit.id }, sector: { id: sector.id }, job: { id: job.id }, training: { id: trainingData.training.id, versionId: trainingData.version.id, moduleId: trainingData.module.id, videoId: trainingData.video?.id, questionnaireId: trainingData.questionnaire?.id, questionId: trainingData.question?.id, correctOptionId: trainingData.correctOption?.id, incorrectOptionId: trainingData.incorrectOption?.id }, automatic,
-    assignment: { id: assignmentResponse.data.id, idempotencyKey: assignmentBody.idempotencyKey }, qr: { id: qrResponse.data.id, token: qrResponse.data.token },
+    assignment: { id: assignmentResponse.data.id, idempotencyKey: assignmentBody.idempotencyKey }, qr: { id: qrResponse.data.id, token: qrResponse.data.token, verificationUrl: qrResponse.data.verificationUrl },
   }
   await writeArtifact('demo-state.json', state)
   await writeArtifact('seed-result.json', { status: 'passed', generatedAt: state.generatedAt, ids: { employeeId: employee.id, trainingId: trainingData.training.id, assignmentId: assignmentResponse.data.id, qrCodeId: qrResponse.data.id } })

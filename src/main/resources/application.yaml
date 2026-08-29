@@ -85,6 +85,8 @@ app:
     cleanup-delay: ${UPLOADS_CLEANUP_DELAY:5m}
   mail:
     from: ${MAIL_FROM:no-reply@localhost}
+  qr:
+    public-base-url: ${QR_PUBLIC_BASE_URL:http://localhost:5173}
 
 logging:
   structured:

@@ -96,6 +96,7 @@ export type QrCodeData = {
   id: string
   employeeId: string
   token: string
+  verificationUrl: string
   status: string
   generatedAt: string
   revokedAt?: string | null

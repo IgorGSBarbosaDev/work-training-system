@@ -2,6 +2,7 @@ package dev.igorbarbosa.worktrainingsystem.shared.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.igorbarbosa.worktrainingsystem.qrverification.application.QrVerificationProperties;
 import dev.igorbarbosa.worktrainingsystem.shared.storage.minio.ObjectStorageProperties;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,8 @@ class FoundationPropertiesTest {
 					"app.storage.region=us-east-1",
 					"app.storage.upload-url-ttl=10m",
 					"app.storage.download-url-ttl=20m",
-					"app.storage.playback-url-ttl=30m");
+					"app.storage.playback-url-ttl=30m",
+					"app.qr.public-base-url=http://localhost:3000/");
 
 	@Test
 	void bindsJwtAndStorageConfiguration() {
@@ -40,11 +42,13 @@ class FoundationPropertiesTest {
 			assertThat(storage.endpoint().getHost()).isEqualTo("minio");
 			assertThat(storage.publicEndpoint().getHost()).isEqualTo("localhost");
 			assertThat(storage.playbackUrlTtl()).isEqualTo(Duration.ofMinutes(30));
+			assertThat(context.getBean(QrVerificationProperties.class).verificationUrl("token").toString())
+					.isEqualTo("http://localhost:3000/verificar/token");
 		});
 	}
 
 	@Configuration(proxyBeanMethods = false)
-	@EnableConfigurationProperties({JwtProperties.class, ObjectStorageProperties.class})
+		@EnableConfigurationProperties({JwtProperties.class, ObjectStorageProperties.class, QrVerificationProperties.class})
 	static class PropertiesConfiguration {
 	}
 }

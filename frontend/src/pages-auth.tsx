@@ -10,7 +10,7 @@ import {
   LockKeyhole,
   Search,
 } from 'lucide-react'
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { api, ApiError } from './api'
 import { homeForRole, useAuth } from './auth'
@@ -81,9 +81,18 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const location = useLocation()
   const navigate = useNavigate()
 
-  if (session) return <Navigate to={homeForRole(session.user.role)} replace />
+  const returnPath = (() => {
+    const from = (location.state as { from?: unknown } | null)?.from
+    return typeof from === 'string' && from.startsWith('/verificar/') ? from : null
+  })()
+
+  if (session) {
+    const destination = session.user.role !== 'EMPLOYEE' && returnPath ? returnPath : homeForRole(session.user.role)
+    return <Navigate to={destination} replace />
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -91,7 +100,7 @@ export function LoginPage() {
     setLoading(true)
     try {
       const next = await signIn(email.trim(), password)
-      navigate(homeForRole(next.user.role), { replace: true })
+      navigate(next.user.role === 'EMPLOYEE' || !returnPath ? homeForRole(next.user.role) : returnPath, { replace: true })
       toast.success('Acesso realizado com segurança.')
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Não foi possível entrar.')
