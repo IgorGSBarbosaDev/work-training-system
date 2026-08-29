@@ -119,6 +119,11 @@ jobs:
       - name: Prepare acceptance evidence directory
         run: mkdir -p acceptance-artifacts
 
+      - name: Install acceptance media dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
       - name: Verify toolchain
         shell: bash
         run: ./scripts/check-environment.sh

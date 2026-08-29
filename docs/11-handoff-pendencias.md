@@ -50,6 +50,9 @@ percentual restante do limite de cinco horas, por isso o handoff foi criado prev
 ## Cuidados para a próxima execução
 
 - Não marcar o MVP como formalmente aprovado antes de um run remoto integralmente verde.
+- O run remoto `33281379509` confirmou frontend, Compose e backend Java 21/25, mas falhou antes de subir os containers
+  porque a imagem do runner não continha `ffmpeg`. O workflow passou a instalar explicitamente essa dependência antes
+  de verificar a toolchain; confirmar o resultado no run corretivo.
 - Não versionar `acceptance-artifacts/`, `frontend/test-results/` ou `frontend/playwright-report/`.
 - Manter `.impeccable/design.json` sem regeneração; a atualização dessa sidecar segue fora do MVP sem solicitação
   específica.
