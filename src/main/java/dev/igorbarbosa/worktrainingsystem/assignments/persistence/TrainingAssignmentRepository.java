@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -33,6 +35,8 @@ public interface TrainingAssignmentRepository extends JpaRepository<TrainingAssi
 			Collection<AssignmentStatus> statuses);
 	Optional<TrainingAssignment> findFirstByOrganizationIdAndEmployeeIdAndTrainingVersionIdAndStatusIn(
 			UUID organizationId, UUID employeeId, UUID trainingVersionId, Collection<AssignmentStatus> statuses);
+	Page<TrainingAssignment> findAllByStatusInAndDueDateBetween(Collection<AssignmentStatus> statuses,
+			LocalDate dueFrom, LocalDate dueTo, Pageable pageable);
 
 	@Modifying
 	@Query(value = """

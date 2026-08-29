@@ -45,8 +45,11 @@ public class UserController {
 	@GetMapping
 	public PageResponse<UserResponse> list(@RequestParam(defaultValue = "0") @Min(0) int page,
 			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
-			@RequestParam(defaultValue = "createdAt,desc") String sort) {
-		return PageResponse.from(users.list(pagination.create(page, size, sort, SORTABLE)));
+			@RequestParam(defaultValue = "createdAt,desc") String sort,
+			@RequestParam(required = false) String search,
+			@RequestParam(required = false) dev.igorbarbosa.worktrainingsystem.identity.domain.UserRole role,
+			@RequestParam(required = false) dev.igorbarbosa.worktrainingsystem.identity.domain.UserStatus status) {
+		return PageResponse.from(users.list(search, role, status, pagination.create(page, size, sort, SORTABLE)));
 	}
 	@GetMapping("/{userId}") public UserResponse get(@PathVariable UUID userId) { return users.get(userId); }
 	@PatchMapping("/{userId}") public UserResponse update(@PathVariable UUID userId, @Valid @RequestBody UpdateUserRequest request) { return users.update(userId, request); }

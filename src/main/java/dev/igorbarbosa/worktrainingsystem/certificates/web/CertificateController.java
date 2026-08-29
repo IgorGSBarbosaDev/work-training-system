@@ -13,6 +13,8 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.Set;
 import java.util.UUID;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,7 +31,14 @@ public class CertificateController {
 	private final CertificateService service; private final PaginationFactory pagination;
 	public CertificateController(CertificateService service, PaginationFactory pagination) { this.service = service; this.pagination = pagination; }
 	@GetMapping("/certificates") @PreAuthorize("hasAnyRole('ADMIN','MANAGER','SUPERVISOR')")
-	public PageResponse<CertificateResponse> list(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(defaultValue = "issuedAt,desc") String sort) { return PageResponse.from(service.list(pagination.create(page, size, sort, SORT))); }
+	public PageResponse<CertificateResponse> list(@RequestParam(required=false) UUID employeeId,
+			@RequestParam(required=false) UUID trainingId,
+			@RequestParam(required=false) dev.igorbarbosa.worktrainingsystem.certificates.domain.CertificateType type,
+			@RequestParam(required=false) dev.igorbarbosa.worktrainingsystem.certificates.domain.CertificateStatus status,
+			@RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate issuedFrom,
+			@RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate issuedTo,
+			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
+			@RequestParam(defaultValue = "issuedAt,desc") String sort) { return PageResponse.from(service.list(employeeId,trainingId,type,status,issuedFrom,issuedTo,pagination.create(page, size, sort, SORT))); }
 	@GetMapping("/me/certificates") @PreAuthorize("hasRole('EMPLOYEE')")
 	public PageResponse<CertificateResponse> mine(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(defaultValue = "issuedAt,desc") String sort) { return PageResponse.from(service.listMine(pagination.create(page, size, sort, SORT))); }
 	@GetMapping("/certificates/{id}") public CertificateResponse get(@PathVariable UUID id) { return service.get(id); }

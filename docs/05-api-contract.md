@@ -397,6 +397,8 @@ Para evitar enumeração de usuários, o endpoint deve retornar `202` mesmo quan
 
 ## 9. Endpoints de usuários e permissões
 
+`GET /users` aceita `search`, `role`, `status`, `page` e `size`. Toda listagem usa `page >= 0` e `1 <= size <= 100`.
+
 | Método | Endpoint | Acesso | Descrição | Sucesso |
 |---|---|---|---|---:|
 | POST | `/users` | ADM | Criar usuário | 201 |
@@ -1310,6 +1312,9 @@ O endpoint não retorna CPF, endereço, telefone, dados médicos ou informaçõe
 
 ## 31. Certificados
 
+`GET /certificates` aceita `employeeId`, `trainingId`, `type`, `status`, `issuedFrom`, `issuedTo`, `page` e `size`.
+As duas datas são inclusivas.
+
 | Método | Endpoint | Acesso | Descrição | Sucesso |
 |---|---|---|---|---:|
 | GET | `/certificates` | ADM/GES | Listar certificados permitidos | 200 |
@@ -1348,6 +1353,9 @@ A exibição pública do nome completo deve ser revisada antes da implementaçã
 | POST | `/admin/email-deliveries/{deliveryId}/retry` | ADM | Tentar envio novamente | 202 |
 
 A criação de notificações é orientada por eventos internos, não por endpoint público genérico.
+
+`GET /admin/email-deliveries` aceita `status`, `recipient`, `createdFrom`, `createdTo`, `page` e `size`. O retry
+reenvia o assunto e o corpo originais persistidos; a API expõe somente estado, tentativas e erro sanitizado.
 
 ## 33. Dashboard do colaborador
 
@@ -1433,6 +1441,10 @@ periodTo
 ```
 
 Consultas pesadas devem utilizar agregação, cache e processamento no backend.
+
+As visões por treinamento, atividade e colaborador retornam `PageResponse` específico e são paginadas no banco.
+Os filtros de período são inclusivos; `periodFrom > periodTo` retorna `400 VALIDATION_ERROR`. O cache padrão usa
+no máximo 500 entradas e expira após 60 segundos, incluindo organização, perfil, escopo, filtros e página na chave.
 
 ## 35. Auditoria
 

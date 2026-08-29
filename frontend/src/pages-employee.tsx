@@ -279,6 +279,7 @@ export function TrainingPlayerPage() {
   const [saveMessage, setSaveMessage] = useState('')
   const lastPosition = useRef(0)
   const watchedSinceSave = useRef(0)
+  const progressInitialized = useRef(false)
 
   const videoInfo = detail.data?.learningPath.modules
     .flatMap((module) => module.videos.map((video) => ({ ...video, moduleTitle: module.title })))
@@ -302,6 +303,23 @@ export function TrainingPlayerPage() {
     const delta = current - lastPosition.current
     if (delta > 0 && delta <= 2.5 && !event.currentTarget.paused) watchedSinceSave.current += delta
     lastPosition.current = current
+  }
+
+  async function initializeProgress(element: HTMLVideoElement) {
+    if (progressInitialized.current) return
+    progressInitialized.current = true
+    try {
+      await api(`/training-assignments/${assignmentId}/videos/${videoId}/progress`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          positionSeconds: Math.floor(element.currentTime), watchedSeconds: 0, reportedPercentage: 0,
+          eventAt: new Date().toISOString(), eventId: crypto.randomUUID(), finalEvent: false,
+        }),
+      })
+    } catch (reason) {
+      progressInitialized.current = false
+      setSaveMessage(apiErrorMessage(reason))
+    }
   }
 
   async function saveProgress(element: HTMLVideoElement, finalEvent: boolean) {
@@ -368,6 +386,7 @@ export function TrainingPlayerPage() {
                   lastPosition.current = playback.resumeAtSeconds
                 }}
                 onTimeUpdate={trackTime}
+                onPlay={(event) => void initializeProgress(event.currentTarget)}
                 onPause={(event) => void saveProgress(event.currentTarget, false)}
                 onEnded={(event) => void saveProgress(event.currentTarget, true)}
                 onError={() => setSaveMessage('Não foi possível reproduzir o vídeo protegido.')}

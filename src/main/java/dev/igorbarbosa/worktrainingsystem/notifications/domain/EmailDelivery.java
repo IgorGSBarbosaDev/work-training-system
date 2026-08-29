@@ -18,15 +18,17 @@ public class EmailDelivery {
 	@Column(name = "notification_id", updatable = false) private UUID notificationId;
 	@Column(nullable = false, updatable = false, length = 254) private String recipient;
 	@Column(nullable = false, updatable = false, length = 200) private String subject;
+	@Column(nullable = false, updatable = false, length = 4000) private String body;
 	@Enumerated(EnumType.STRING) @Column(nullable = false, length = 16) private Status status;
 	@Column(name = "attempt_count", nullable = false) private int attemptCount;
 	@Column(name = "last_error", length = 1000) private String lastError;
 	@Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
 	@Column(name = "updated_at", nullable = false) private Instant updatedAt;
 	protected EmailDelivery() {}
-	public EmailDelivery(UUID organizationId, UUID userId, UUID notificationId, String recipient, String subject, Instant now) {
+	public EmailDelivery(UUID organizationId, UUID userId, UUID notificationId, String recipient, String subject,
+			String body, Instant now) {
 		this.id = UUID.randomUUID(); this.organizationId = organizationId; this.userId = userId; this.notificationId = notificationId;
-		this.recipient = recipient; this.subject = subject; this.status = Status.PENDING; this.createdAt = now; this.updatedAt = now;
+		this.recipient = recipient; this.subject = subject; this.body = body; this.status = Status.PENDING; this.createdAt = now; this.updatedAt = now;
 	}
 	public void retry(Instant now) { status = Status.PENDING; lastError = null; updatedAt = now; }
 	public void sent(Instant now) { status = Status.SENT; attemptCount++; lastError = null; updatedAt = now; }
@@ -37,6 +39,7 @@ public class EmailDelivery {
 	public UUID getNotificationId() { return notificationId; }
 	public String getRecipient() { return recipient; }
 	public String getSubject() { return subject; }
+	public String getBody() { return body; }
 	public Status getStatus() { return status; }
 	public int getAttemptCount() { return attemptCount; }
 	public String getLastError() { return lastError; }

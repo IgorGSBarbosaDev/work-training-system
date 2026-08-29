@@ -17,15 +17,16 @@ public class Notification {
 	@Column(nullable = false, updatable = false, length = 2000) private String message;
 	@Column(name = "related_entity_type", updatable = false) private String relatedEntityType;
 	@Column(name = "related_entity_id", updatable = false) private UUID relatedEntityId;
+	@Column(name = "deduplication_key", nullable = false, updatable = false, length = 240) private String deduplicationKey;
 	@Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
 	@Column(name = "read_at") private Instant readAt;
 	@Column(name = "archived_at") private Instant archivedAt;
 	protected Notification() {}
 	public Notification(UUID organizationId, UUID userId, String type, String title, String message,
-			String relatedEntityType, UUID relatedEntityId, Instant createdAt) {
+			String relatedEntityType, UUID relatedEntityId, String deduplicationKey, Instant createdAt) {
 		this.id = UUID.randomUUID(); this.organizationId = organizationId; this.userId = userId; this.type = type;
 		this.title = title; this.message = message; this.relatedEntityType = relatedEntityType;
-		this.relatedEntityId = relatedEntityId; this.createdAt = createdAt;
+		this.relatedEntityId = relatedEntityId; this.deduplicationKey = deduplicationKey; this.createdAt = createdAt;
 	}
 	public void read(Instant now) { if (readAt == null) readAt = now; }
 	public void archive(Instant now) { archivedAt = now; }
@@ -37,6 +38,7 @@ public class Notification {
 	public String getMessage() { return message; }
 	public String getRelatedEntityType() { return relatedEntityType; }
 	public UUID getRelatedEntityId() { return relatedEntityId; }
+	public String getDeduplicationKey() { return deduplicationKey; }
 	public Instant getCreatedAt() { return createdAt; }
 	public Instant getReadAt() { return readAt; }
 	public Instant getArchivedAt() { return archivedAt; }

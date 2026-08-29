@@ -27,7 +27,7 @@ spring:
   cache:
     type: caffeine
     caffeine:
-      spec: ${CACHE_SPEC:maximumSize=1000,expireAfterWrite=10m}
+      spec: ${CACHE_SPEC:maximumSize=500,expireAfterWrite=60s}
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1025}
@@ -38,6 +38,9 @@ spring:
       mail.smtp:
         auth: ${MAIL_SMTP_AUTH:false}
         starttls.enable: ${MAIL_SMTP_STARTTLS:false}
+        connectiontimeout: ${MAIL_SMTP_CONNECTION_TIMEOUT:3000}
+        timeout: ${MAIL_SMTP_READ_TIMEOUT:3000}
+        writetimeout: ${MAIL_SMTP_WRITE_TIMEOUT:3000}
   servlet:
     multipart:
       max-file-size: 5MB
@@ -85,6 +88,9 @@ app:
     cleanup-delay: ${UPLOADS_CLEANUP_DELAY:5m}
   mail:
     from: ${MAIL_FROM:no-reply@localhost}
+  notifications:
+    due-soon-days: ${NOTIFICATION_DUE_SOON_DAYS:7}
+    due-soon-cron: ${NOTIFICATION_DUE_SOON_CRON:0 30 2 * * *}
   qr:
     public-base-url: ${QR_PUBLIC_BASE_URL:http://localhost:5173}
 

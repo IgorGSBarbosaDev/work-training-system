@@ -242,13 +242,38 @@ export type Expiration = {
 }
 
 export type PersonalDashboard = {
+	continueTraining?: {
+		assignmentId: string
+		trainingName: string
+		progressPercentage: number
+		resumeAt?: { videoId: string; positionSeconds: number } | null
+	} | null
   counts: {
     pending: number
     inProgress: number
     expiringSoon: number
     expired: number
     completed: number
+		availableActivities: number
+		blockedActivities: number
   }
+	pendingTrainings: DashboardTrainingSummary[]
+	expiringTrainings: DashboardTrainingSummary[]
+	blockedActivities: Array<{
+		activityId: string
+		activityName: string
+		status: string
+		blockingTrainings: string[]
+	}>
+}
+
+export type DashboardTrainingSummary = {
+	assignmentId: string
+	trainingId: string
+	trainingName: string
+	status: string
+	dueDate?: string | null
+	progressPercentage: number
 }
 
 export type AdminDashboard = {
@@ -261,7 +286,56 @@ export type AdminDashboard = {
   failed: number
   expired: number
   expiringIn30Days: number
+	employeesWithPendingItems: number
+	employeesWithBlockedActivities: number
   generatedAt: string
+}
+
+export type TrainingDashboardItem = {
+	trainingId: string
+	trainingName: string
+	trainingCode: string
+	assigned: number
+	notStarted: number
+	inProgress: number
+	latestAssessmentApproved: number
+	latestAssessmentFailed: number
+	completed: number
+	expired: number
+	completionRate: number
+	averageLatestAssessment: number
+	averageCompletionHours: number
+}
+
+export type ActivityDashboardItem = {
+	activityId: string
+	activityName: string
+	relatedJobs: number
+	requirements: number
+	availableEmployees: number
+	expiringEmployees: number
+	blockedEmployees: number
+	mainBlockingTrainings: string[]
+}
+
+export type EmployeeDashboardItem = {
+	employeeId: string
+	employeeName: string
+	registration: string
+	unitId: string
+	unitName: string
+	sectorId: string
+	sectorName: string
+	jobId: string
+	jobName: string
+	mandatoryTrainings: number
+	optionalTrainings: number
+	averageProgress: number
+	averageLatestAssessment: number
+	completions: number
+	expirations: number
+	availableActivities: number
+	blockedActivities: number
 }
 
 export type Questionnaire = {

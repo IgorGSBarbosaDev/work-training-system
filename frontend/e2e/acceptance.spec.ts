@@ -29,20 +29,68 @@ function acceptanceState() {
   return JSON.parse(readFileSync(resolve(process.cwd(), '..', 'acceptance-artifacts', 'demo-state.json'), 'utf8')) as {
     assignment: { id: string }
     training: { videoId: string; questionnaireId: string }
+    browser: { assignmentId: string; videoId: string; questionnaireId: string }
     qr: { token: string }
   }
 }
 
 test.describe('technical acceptance by role', () => {
+  test('employee completes the exclusive training with real video and opens the certificate', async ({ page }) => {
+    test.setTimeout(90_000)
+    const state = acceptanceState()
+    await login(page, users.employee)
+
+    await page.goto(`/meu/atribuicoes/${state.browser.assignmentId}`)
+    await expect(page.getByRole('heading', { name: 'Treinamento navegador de aceite' })).toBeVisible()
+    const start = page.getByRole('button', { name: 'Iniciar treinamento' })
+    if (await start.isVisible()) await start.click()
+    await page.getByRole('link', { name: /Continuar treinamento/ }).click()
+    await page.getByRole('button', { name: 'Carregar vídeo protegido' }).click()
+
+    const video = page.locator('video')
+    await expect(video).toBeVisible()
+    await video.evaluate(async (element: HTMLVideoElement) => {
+      await element.play()
+    })
+    await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime), {
+      timeout: 20_000,
+      message: 'the protected MP4 should play beyond the 80% threshold',
+    }).toBeGreaterThanOrEqual(8.2)
+    await video.evaluate((element: HTMLVideoElement) => element.pause())
+    await expect(page.getByText('Vídeo obrigatório concluído.')).toBeVisible({ timeout: 15_000 })
+
+    await page.goto(`/meu/atribuicoes/${state.browser.assignmentId}/questionarios/${state.browser.questionnaireId}`)
+    await page.getByText('Vídeo reproduzido e avaliação aprovada').click()
+    await page.getByRole('button', { name: /Enviar respostas/ }).click()
+    await expect(page.getByRole('heading', { name: 'Avaliação aprovada' })).toBeVisible()
+
+    await page.goto('/meu/certificados')
+    const certificate = page.locator('a[href^="/meu/certificados/"]').first()
+    await expect(certificate).toBeVisible({ timeout: 30_000 })
+    await certificate.click()
+    await expect(page.getByRole('heading', { name: 'Certificado de conclusão' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Baixar PDF/ })).toBeVisible()
+  })
+
   test('admin can access operational dashboard and audit', async ({ page }) => {
     await login(page, users.admin)
     await expect(page).toHaveURL(/\/admin\/dashboard$/)
-    await expect(page.getByText('Visão operacional consolidada')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Riscos que pedem decisão' })).toBeVisible()
 
     await page.goto('/admin/treinamentos')
     await expect(page.getByRole('heading', { name: 'Treinamentos' })).toBeVisible()
     await page.goto('/admin/auditoria')
     await expect(page.getByRole('heading', { name: 'Auditoria' })).toBeVisible()
+  })
+
+  test('admin dashboard keeps tabs and filters usable on a mobile viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await login(page, users.admin)
+    await expect(page.getByRole('tablist', { name: 'Visões do dashboard' })).toBeVisible()
+    await page.getByRole('tab', { name: 'Treinamentos' }).click()
+    await expect(page).toHaveURL(/visao=treinamentos/)
+    await expect(page.getByRole('region', { name: 'Filtros compartilhados' })).toBeVisible()
+    await expect(page.getByLabel('Unidade')).toBeVisible()
   })
 
   test('employee can see assignments, qualifications and certificate area', async ({ page }) => {
@@ -73,7 +121,7 @@ test.describe('technical acceptance by role', () => {
 
     await page.goto('/meu/certificados')
     await expect(page.getByRole('heading', { name: 'Meus certificados' })).toBeVisible()
-    await expect(page.getByText(/Certificado /)).toBeVisible()
+    await expect(page.getByText(/Certificado /).first()).toBeVisible()
 
     await page.goto('/meu/qr-code')
     await expect(page.getByRole('heading', { name: 'Meu QR Code' })).toBeVisible()

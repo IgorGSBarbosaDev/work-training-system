@@ -66,7 +66,9 @@ async function readProblem(response: Response): Promise<ApiProblem | undefined> 
   }
 }
 
-async function refreshSession(): Promise<boolean> {
+let refreshPromise: Promise<boolean> | null = null
+
+async function performRefresh(): Promise<boolean> {
   const session = authStore.get()
   if (!session?.refreshToken) return false
 
@@ -80,6 +82,23 @@ async function refreshSession(): Promise<boolean> {
   const next = (await response.json()) as Session
   authStore.set({ ...session, ...next, user: next.user || session.user })
   return true
+}
+
+function refreshSession(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = performRefresh()
+      .catch(() => false)
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
+function expireSessionOnce() {
+  if (!authStore.get()) return
+  authStore.clear()
+  window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
 }
 
 export async function api<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
@@ -106,8 +125,7 @@ export async function api<T>(path: string, init: RequestInit = {}, retry = true)
   if (!response.ok) {
     const problem = await readProblem(response)
     if (response.status === 401 && retry) {
-      authStore.clear()
-      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+      expireSessionOnce()
     }
     throw new ApiError(
       response.status,

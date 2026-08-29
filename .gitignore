@@ -44,6 +44,9 @@ frontend/dist/
 frontend/.vite/
 frontend/coverage/
 frontend/*.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
+.impeccable/hook.cache.json
 
 ### Acceptance artifacts ###
 acceptance-artifacts/

@@ -7,6 +7,7 @@ import dev.igorbarbosa.worktrainingsystem.shared.web.pagination.PageResponse;
 import dev.igorbarbosa.worktrainingsystem.shared.web.pagination.PaginationFactory;
 import java.util.Set;
 import java.util.UUID;
+import java.time.Instant;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -32,8 +33,11 @@ public class NotificationController {
 	@PatchMapping("/me/notifications/read-all") public ResponseEntity<Void> readAll() { service.readAll(); return ResponseEntity.noContent().build(); }
 	@PatchMapping("/me/notifications/{id}/archive") public NotificationResponse archive(@PathVariable UUID id) { return notification(service.archive(id)); }
 	@GetMapping("/admin/email-deliveries") @PreAuthorize("hasRole('ADMIN')") public PageResponse<EmailDeliveryResponse> deliveries(@RequestParam(defaultValue = "0") int page,
-		@RequestParam(defaultValue = "20") int size, @RequestParam(defaultValue = "updatedAt,desc") String sort) {
-		return PageResponse.from(service.deliveries(pagination.create(page, size, sort, SORT)).map(this::delivery));
+		@RequestParam(defaultValue = "20") int size, @RequestParam(defaultValue = "updatedAt,desc") String sort,
+		@RequestParam(required=false) dev.igorbarbosa.worktrainingsystem.notifications.domain.EmailDelivery.Status status,
+		@RequestParam(required=false) String recipient, @RequestParam(required=false) Instant createdFrom,
+		@RequestParam(required=false) Instant createdTo) {
+		return PageResponse.from(service.deliveries(status,recipient,createdFrom,createdTo,pagination.create(page, size, sort, SORT)).map(this::delivery));
 	}
 	@PostMapping("/admin/email-deliveries/{id}/retry") @PreAuthorize("hasRole('ADMIN')") public ResponseEntity<EmailDeliveryResponse> retry(@PathVariable UUID id) { return ResponseEntity.accepted().body(delivery(service.retryDelivery(id))); }
 	private NotificationResponse notification(dev.igorbarbosa.worktrainingsystem.notifications.domain.Notification n) { return new NotificationResponse(n.getId(), n.getType(), n.getTitle(), n.getMessage(), n.getRelatedEntityType(), n.getRelatedEntityId(), n.getCreatedAt(), n.getReadAt(), n.getArchivedAt()); }

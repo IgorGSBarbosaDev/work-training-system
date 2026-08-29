@@ -9,4 +9,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
 	Page<Notification> findAllByOrganizationIdAndUserIdAndArchivedAtIsNull(UUID organizationId, UUID userId, Pageable pageable);
 	long countByOrganizationIdAndUserIdAndReadAtIsNullAndArchivedAtIsNull(UUID organizationId, UUID userId);
+	boolean existsByOrganizationIdAndUserIdAndTypeAndDeduplicationKey(UUID organizationId, UUID userId, String type,
+			String deduplicationKey);
 }
