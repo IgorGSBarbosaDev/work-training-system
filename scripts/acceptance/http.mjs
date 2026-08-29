@@ -4,6 +4,7 @@ import { createHash, randomUUID } from 'node:crypto'
 export const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:8080/api/v1'
 export const MAILPIT_BASE_URL = process.env.MAILPIT_BASE_URL ?? 'http://localhost:8025'
 export const ARTIFACT_DIR = process.env.ACCEPTANCE_ARTIFACT_DIR ?? 'acceptance-artifacts'
+export const API_ORIGIN = new URL(API_BASE_URL).origin
 
 export class AcceptanceError extends Error {
   constructor(message, details = {}) {
@@ -27,7 +28,13 @@ export async function request(path, options = {}) {
     fetchOptions.body = JSON.stringify(body)
   }
 
-  const response = await fetch(urlFor(base, path), { ...fetchOptions, headers: requestHeaders })
+  const requestUrl = urlFor(base, path)
+  let response
+  try {
+    response = await fetch(requestUrl, { ...fetchOptions, headers: requestHeaders })
+  } catch (error) {
+    throw new AcceptanceError(`Fetch failed for ${requestUrl}: ${error instanceof Error ? error.message : String(error)}`)
+  }
   const raw = await response.text()
   let data = raw
   try {
@@ -170,7 +177,7 @@ export async function resetPasswordFromMailpit(userId, email, password, adminTok
 
 export async function waitForHealth() {
   return waitFor('backend readiness', async () => {
-    const response = await request('http://localhost:8080/actuator/health/readiness', { expected: [200, 503] })
+    const response = await request(`${API_ORIGIN}/actuator/health/readiness`, { expected: [200, 503] })
     return response.status === 200
   })
 }

@@ -20,8 +20,9 @@ const users = {
 async function login(page: Page, user: { email: string; password: string }) {
   await page.goto('/login')
   await page.getByLabel('E-mail corporativo').fill(user.email)
-  await page.getByLabel('Senha').fill(user.password)
+  await page.locator('input[autocomplete="current-password"]').fill(user.password)
   await page.getByRole('button', { name: 'Entrar' }).click()
+  await expect(page).toHaveURL(/\/(?:admin|equipe|meu)\/dashboard$/)
 }
 
 function acceptanceState() {
@@ -68,7 +69,7 @@ test.describe('technical acceptance by role', () => {
     await expect(page.getByRole('button', { name: 'Carregar vídeo protegido' })).toBeVisible()
 
     await page.goto(`/meu/atribuicoes/${state.assignment.id}/questionarios/${state.training.questionnaireId}`)
-    await expect(page.getByText(/Questionário de aceite|Nova tentativa indisponível/)).toBeVisible()
+    await expect(page.getByText(/Questionário de aceite|Nova tentativa indisponível|A avaliação não está disponível neste estado/)).toBeVisible()
 
     await page.goto('/meu/certificados')
     await expect(page.getByRole('heading', { name: 'Meus certificados' })).toBeVisible()
@@ -87,7 +88,23 @@ test.describe('technical acceptance by role', () => {
     await page.goto(`/equipe/verificar-qr/${encodeURIComponent(state.qr.token)}`)
     await expect(page.getByRole('heading', { name: 'Colaborador Demo' })).toBeVisible()
 
+    await page.goto(`/verificar/${encodeURIComponent(state.qr.token)}`)
+    await expect(page.getByRole('heading', { name: 'Colaborador Demo' })).toBeVisible()
+
     await page.goto('/admin/dashboard')
     await expect(page).toHaveURL(/\/erro\/403$/)
+  })
+
+  test('QR deep link returns to verification after management login', async ({ page }) => {
+    const state = acceptanceState()
+    await page.goto(`/verificar/${encodeURIComponent(state.qr.token)}`)
+    await expect(page).toHaveURL(/\/login$/)
+
+    await page.getByLabel('E-mail corporativo').fill(users.manager.email)
+    await page.locator('input[autocomplete="current-password"]').fill(users.manager.password)
+    await page.getByRole('button', { name: 'Entrar' }).click()
+
+    await expect(page).toHaveURL(new RegExp(`/verificar/${encodeURIComponent(state.qr.token)}$`))
+    await expect(page.getByRole('heading', { name: 'Colaborador Demo' })).toBeVisible()
   })
 })

@@ -25,7 +25,7 @@ public class VideoPlaybackService {
 		this.storage = storage; this.currentUser = currentUser;
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public PlaybackUrlResponse playbackUrl(UUID videoId) {
 		var video = trainings.requireVideo(videoId);
 		CurrentUser actor = currentUser.requireCurrentUser();

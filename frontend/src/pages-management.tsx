@@ -1342,5 +1342,10 @@ function secondaryText(item: GenericRecord): string {
     item.entityType ||
     item.createdAt ||
     ''
-  return typeof value === 'string' && value.includes('T') ? formatDateTime(value) : String(value)
+  const timestamp = item.occurredAt || item.createdAt || item.updatedAt
+  const formattedTimestamp = typeof timestamp === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(timestamp)
+    ? formatDateTime(timestamp)
+    : ''
+  if (typeof value === 'string' && value) return formattedTimestamp ? `${value} · ${formattedTimestamp}` : value
+  return formattedTimestamp
 }
