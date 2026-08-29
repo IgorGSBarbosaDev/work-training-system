@@ -4,7 +4,7 @@
 
 - `work-training-system-fonte-da-verdade.md` is the official MVP scope. Read the relevant sections before domain work; scope changes must be recorded there before implementation.
 - All PRDs and supporting product documents must be stored in `docs/`. Read the relevant files in this directory before planning or implementing a feature.
-- Treat the frontend, Docker Compose, CI, object storage, and the domain modules in that document as planned architecture, not existing code. The repository currently contains only one Spring Boot Maven module.
+- Treat the frontend, Docker Compose, CI, object storage, and the domain modules in that document as the planned architecture; verify their current implementation in the repository before making decisions.
 - For runnable behavior and dependency versions, trust `pom.xml` and `src/` over the scope document or generated `HELP.md`.
 
 ## Stack
@@ -16,8 +16,8 @@
 - Development: Lombok and Spring Boot DevTools.
 - Monitoring: Spring Boot Actuator.
 - Tests: JUnit, Mockito and Testcontainers.
-- Planned frontend: React, TypeScript and Vite.
-- Planned infrastructure: Docker Compose, object storage and GitHub Actions.
+- Frontend: React, TypeScript and Vite.
+- Infrastructure: Docker Compose, object storage and GitHub Actions.
 
 ## Commands
 
@@ -32,7 +32,13 @@
 - A working Docker-compatible daemon is required by the current context test and `spring-boot:test-run`; `TestcontainersConfiguration` starts `postgres:latest` and supplies connection details via `@ServiceConnection`.
 - `src/main/resources/application.yaml` has no datasource configuration. Plain `./mvnw spring-boot:run` therefore needs external datasource settings; use `spring-boot:test-run` for the self-contained development path.
 - Import `TestcontainersConfiguration` in full-context tests that need PostgreSQL, following `WorkTrainingSystemApplicationTests`.
-- There is currently no configured formatter, linter, static-analysis task, or CI workflow; Maven compilation and tests are the available verification steps.
+- There is currently no configured formatter or static-analysis task. Frontend lint/build and the CI workflow are available in addition to Maven compilation and tests.
+
+## Documentation Of Changes
+
+- After every modification, implementation or correction, document in simple, explanatory language what changed, why it changed, the affected area and the validations executed.
+- Update the relevant Markdown files in `docs/` to record what was implemented, what remains pending and any API, route or operational contract changes.
+- Update `work-training-system-fonte-da-verdade.md` before implementing any change to the MVP scope.
 
 ## Code Quality
 

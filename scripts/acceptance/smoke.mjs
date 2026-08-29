@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import {
   AcceptanceError,
+  API_ORIGIN,
   api,
   itemsFromPage,
   login,
@@ -22,6 +23,13 @@ function requireValue(value, label) {
   return value
 }
 
+const ASSESSMENT_RESULT = Object.freeze({ APPROVED: 'APPROVED', FAILED: 'FAILED' })
+
+function assertAssessmentResult(response, expected) {
+  const actual = response.data?.result
+  if (actual !== expected) throw new Error(`Questionnaire result was ${actual}; expected ${expected}`)
+}
+
 async function main() {
   await waitForHealth()
   const state = JSON.parse(await readFile('acceptance-artifacts/demo-state.json', 'utf8'))
@@ -33,6 +41,7 @@ async function main() {
   const questionnaireId = requireValue(state.training.questionnaireId, 'training.questionnaireId')
   const questionId = requireValue(state.training.questionId, 'training.questionId')
   const correctOptionId = requireValue(state.training.correctOptionId, 'training.correctOptionId')
+  const incorrectOptionId = requireValue(state.training.incorrectOptionId, 'training.incorrectOptionId')
 
   const checks = []
   const check = async (name, operation) => {
@@ -41,7 +50,7 @@ async function main() {
   }
 
   await check('admin health and identity', async () => {
-    const health = await api('http://localhost:8080/actuator/health/readiness', { expected: [200] })
+    const health = await api(`${API_ORIGIN}/actuator/health/readiness`, { expected: [200] })
     if (health.status !== 200) throw new Error('Backend is not ready')
     await api('/auth/me', { token: admin.accessToken, expected: [200] })
   })
@@ -67,6 +76,12 @@ async function main() {
     if (!itemsFromPage(automaticAssignments.data).some((item) => item.id === state.automatic.assignmentId)) throw new Error('Automatic assignment was not persisted')
   })
   await check('progress to eighty percent', async () => {
+    const openedAt = new Date().toISOString()
+    await api(`/training-assignments/${assignmentId}/videos/${videoId}/progress`, {
+      method: 'PUT', token: employee.accessToken,
+      body: { positionSeconds: 0, watchedSeconds: 0, reportedPercentage: 0, eventAt: openedAt, eventId: 'acceptance-progress-open', finalEvent: false }, expected: [200],
+    })
+    await new Promise((resolve) => setTimeout(resolve, 4_500))
     const eventAt = new Date().toISOString()
     const progress = await api(`/training-assignments/${assignmentId}/videos/${videoId}/progress`, {
       method: 'PUT', token: employee.accessToken,
@@ -78,11 +93,16 @@ async function main() {
   await check('approved questionnaire and automatic completion', async () => {
     const questionnaire = await api(`/training-assignments/${assignmentId}/questionnaires/${questionnaireId}`, { token: employee.accessToken, expected: [200] })
     if (!questionnaire.data) throw new Error('Questionnaire response is empty')
+    const failedAnswerBody = { answers: [{ questionId, answerOptionId: incorrectOptionId }] }
+    const failedAttempt = await api(`/training-assignments/${assignmentId}/questionnaires/${questionnaireId}/attempts`, { method: 'POST', token: employee.accessToken, headers: { 'Idempotency-Key': 'acceptance-attempt-failed-v1' }, body: failedAnswerBody, expected: [201, 200] })
+    const repeatedFailedAttempt = await api(`/training-assignments/${assignmentId}/questionnaires/${questionnaireId}/attempts`, { method: 'POST', token: employee.accessToken, headers: { 'Idempotency-Key': 'acceptance-attempt-failed-v1' }, body: failedAnswerBody, expected: [201, 200] })
+    if (repeatedFailedAttempt.data.attemptId !== failedAttempt.data.attemptId) throw new Error('Failed assessment idempotency mismatch')
+    assertAssessmentResult(failedAttempt, ASSESSMENT_RESULT.FAILED)
     const answerBody = { answers: [{ questionId, answerOptionId: correctOptionId }] }
     completedAttempt = await api(`/training-assignments/${assignmentId}/questionnaires/${questionnaireId}/attempts`, { method: 'POST', token: employee.accessToken, headers: { 'Idempotency-Key': 'acceptance-attempt-v1' }, body: answerBody, expected: [201, 200] })
     const repeatedAttempt = await api(`/training-assignments/${assignmentId}/questionnaires/${questionnaireId}/attempts`, { method: 'POST', token: employee.accessToken, headers: { 'Idempotency-Key': 'acceptance-attempt-v1' }, body: answerBody, expected: [201, 200] })
     if (repeatedAttempt.data.attemptId !== completedAttempt.data.attemptId) throw new Error('Assessment idempotency mismatch')
-    if (completedAttempt.data.result !== 'PASSED') throw new Error(`Questionnaire result was ${completedAttempt.data.result}`)
+    assertAssessmentResult(completedAttempt, ASSESSMENT_RESULT.APPROVED)
     await waitFor('assignment completion', async () => {
       const response = await api(`/training-assignments/${assignmentId}`, { token: employee.accessToken, expected: [200] })
       return response.data.status === 'COMPLETED' ? response.data : null
@@ -108,7 +128,9 @@ async function main() {
     const revoked = await api(`/employees/${state.employee.id}/qr-code/revoke`, { method: 'POST', token: admin.accessToken, body: { reason: 'Rotação da fixture de aceite' }, expected: [200] })
     if (revoked.data?.status !== 'REVOKED') throw new Error('QR revocation was not persisted')
     const regenerated = await api(`/employees/${state.employee.id}/qr-code`, { method: 'POST', token: admin.accessToken, expected: [201] })
-    state.qr = { id: regenerated.data.id, token: regenerated.data.token }
+    state.qr = { id: regenerated.data.id, token: regenerated.data.token, verificationUrl: regenerated.data.verificationUrl }
+    const verificationUrl = new URL(regenerated.data.verificationUrl)
+    if (verificationUrl.pathname !== `/verificar/${regenerated.data.token}`) throw new Error('QR verification URL is not aligned with the canonical frontend route')
     await writeArtifact('demo-state.json', state)
     qr = await api('/me/qr-code', { token: employee.accessToken, expected: [200] })
     if (qr.data?.id !== state.qr.id) throw new Error('QR regeneration was not returned as the active code')

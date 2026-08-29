@@ -54,7 +54,7 @@ function ProtectedRoute({ roles, children }: { roles: Role[]; children: ReactNod
   const location = useLocation()
 
   if (!session) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}${location.hash}` }} />
   }
   if (!roles.includes(session.user.role)) {
     return <Navigate to="/erro/403" replace />
@@ -69,6 +69,7 @@ function HomeRedirect() {
 
 const employeeRoles: Role[] = ['EMPLOYEE']
 const managementRoles: Role[] = ['MANAGER', 'SUPERVISOR']
+const qrVerificationRoles: Role[] = ['ADMIN', 'MANAGER', 'SUPERVISOR']
 const adminRoles: Role[] = ['ADMIN']
 
 export function App() {
@@ -106,8 +107,9 @@ export function App() {
         <Route path="/equipe/colaboradores" element={<ProtectedRoute roles={managementRoles}><EmployeesPage team /></ProtectedRoute>} />
         <Route path="/equipe/colaboradores/:employeeId" element={<ProtectedRoute roles={managementRoles}><EmployeeDetailPage team /></ProtectedRoute>} />
         <Route path="/equipe/qualificacoes" element={<ProtectedRoute roles={managementRoles}><QualificationsManagementPage team /></ProtectedRoute>} />
-        <Route path="/equipe/verificar-qr" element={<ProtectedRoute roles={managementRoles}><QrVerificationPage /></ProtectedRoute>} />
-        <Route path="/equipe/verificar-qr/:token" element={<ProtectedRoute roles={managementRoles}><QrVerificationResultPage /></ProtectedRoute>} />
+        <Route path="/verificar/:token" element={<ProtectedRoute roles={qrVerificationRoles}><QrVerificationResultPage /></ProtectedRoute>} />
+        <Route path="/equipe/verificar-qr" element={<ProtectedRoute roles={qrVerificationRoles}><QrVerificationPage /></ProtectedRoute>} />
+        <Route path="/equipe/verificar-qr/:token" element={<ProtectedRoute roles={qrVerificationRoles}><QrVerificationResultPage /></ProtectedRoute>} />
         <Route path="/equipe/relatorios" element={<ProtectedRoute roles={managementRoles}><ReportsPage team /></ProtectedRoute>} />
         <Route path="/equipe/perfil" element={<ProtectedRoute roles={managementRoles}><ProfilePage /></ProtectedRoute>} />
 

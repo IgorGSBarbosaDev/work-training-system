@@ -4,6 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -17,6 +19,7 @@ public class QrCodeAccessLog {
 	@Column(nullable=false, updatable=false, length=24) private String result;
 	@Column(name="request_id", nullable=false, updatable=false, length=128) private String requestId;
 	@Column(name="token_hash", nullable=false, updatable=false, length=64) private String tokenHash;
+	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name="technical_metadata", nullable=false, updatable=false, columnDefinition="jsonb") private String technicalMetadata;
 	protected QrCodeAccessLog() {}
 	public QrCodeAccessLog(UUID organizationId, UUID qrCodeId, UUID userId, Instant now, String result, String requestId, String tokenHash) { this.id=UUID.randomUUID(); this.organizationId=organizationId; this.qrCodeId=qrCodeId; this.queriedByUserId=userId; this.queriedAt=now; this.result=result; this.requestId=requestId; this.tokenHash=tokenHash; this.technicalMetadata="{}"; }

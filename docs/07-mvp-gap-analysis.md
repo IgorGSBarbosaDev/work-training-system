@@ -4,6 +4,24 @@
 **Base analisada:** árvore atual do repositório, `pom.xml`, `src/`, `frontend/`, Docker Compose, CI, contratos e documentos em `docs/`.  
 **Referências:** [PRD do MVP](01-prd-mvp.md), [fonte da verdade](../work-training-system-fonte-da-verdade.md), [auditoria de implementação](06-implementation-audit.md), [contrato da API](05-api-contract.md) e [aceite técnico](09-technical-acceptance.md).
 
+## Atualização de implementação — 29/08/2026
+
+- [x] O smoke test passou a validar os valores reais `FAILED` e `APPROVED` retornados pela API de avaliações, mantendo
+  a idempotência das tentativas.
+- [x] QR Codes agora expõem uma `verificationUrl` absoluta e canônica em `/verificar/{token}`; a imagem e o QR visual
+  do frontend usam o mesmo link.
+- [x] O frontend aceita a rota protegida `/verificar/{token}`, inclui administradores na consulta autorizada e
+  preserva o deep link após o login.
+- [x] `AGENTS.md` passou a exigir documentação simples de toda alteração e atualização dos Markdown relevantes.
+- [x] A execução integrada isolada passou com Compose, seed, smoke, Mailpit e Playwright em 29/08/2026; o smoke
+  registrou `email retry` como `skipped` apenas porque não havia falha SMTP para reprocessar.
+- [x] A execução corrigiu dois defeitos encontrados no caminho crítico: playback não pode abrir uma transação somente
+  leitura para executar `FOR NO KEY UPDATE`, e o log de acesso QR precisa mapear `technical_metadata` como `jsonb`.
+- [ ] Ainda falta executar o workflow oficial com Java 21 e Node 22 para publicar os artefatos no CI e encerrar o aceite
+  formal.
+
+A lista consolidada e atualizada de pendências está em [docs/10-mvp-pendencias.md](10-mvp-pendencias.md).
+
 ## Resumo executivo
 
 O projeto possui uma fundação de backend avançada em um monólito modular Spring Boot. A prioridade 1 — editor administrativo de treinamentos — e a prioridade 2 — relações organizacionais — estão integradas nesta linha de trabalho. O backend preserva versões publicadas, aplica regras de escopo e autorização, e mantém histórico de atribuições, conclusões, qualificações e auditoria.
@@ -54,7 +72,8 @@ Ainda precisam de comprovação integrada ou aprofundamento conforme o aceite:
 
 - Executar `./mvnw -B -ntp verify` com Java 21 e versões posteriores suportadas.
 - Executar `npm ci`, testes, lint, build e Playwright com Node 22 no CI.
-- Subir Compose, executar seed idempotente, smoke API, Mailpit e browser acceptance.
+- Subir Compose, executar seed idempotente, smoke API, Mailpit e browser acceptance no ambiente oficial do CI; a
+  execução local isolada já foi validada em 29/08/2026.
 - Validar upload e reprodução de um vídeo real, além de certificado, QR Code, notificações, e-mail e auditoria.
 - Atualizar a matriz de [docs/09-technical-acceptance.md](09-technical-acceptance.md) com artefatos reais antes de declarar o MVP concluído.
 
@@ -67,7 +86,8 @@ Ainda precisam de comprovação integrada ou aprofundamento conforme o aceite:
 
 - A prioridade 2 foi desenvolvida com testes de relações organizacionais, propagação de efeitos e persistência de auditoria.
 - A prioridade 1 registrou validação de frontend, backend, migrations, Compose, MinIO, publicação e imutabilidade.
-- A validação final continua dependente de uma execução oficial com Java 21, Node 22 e Docker, seguida da atualização da matriz de aceite.
+- A validação local integrada passou em 29/08/2026 com containers Java 21 e build frontend Node 22; a confirmação formal
+  continua dependente da execução do workflow com Java 21, Node 22 e Docker.
 
 ## Ordem recomendada
 
