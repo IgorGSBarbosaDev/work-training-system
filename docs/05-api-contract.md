@@ -1254,6 +1254,16 @@ A URL codificada no QR Code pode apontar para:
 /verificar/{token}
 ```
 
+As respostas de `GET /employees/{employeeId}/qr-code`, `GET /me/qr-code` e da geração de QR Code também retornam
+`verificationUrl`, uma URL absoluta construída com a origem pública do frontend (`QR_PUBLIC_BASE_URL`). O campo
+`token` permanece disponível para entrada manual e para a chamada da API de verificação.
+
+O frontend possui a rota protegida `/verificar/{token}` como entrada canônica do QR Code e mantém
+`/equipe/verificar-qr/{token}` para navegação interna compatível.
+
+`MANAGER` e `SUPERVISOR` também precisam possuir um escopo ativo que alcance o colaborador; sem esse vínculo o backend
+retorna `403 ACCESS_DENIED`, mesmo que o papel esteja autorizado na rota.
+
 O frontend autenticado usa o token para chamar:
 
 ```text

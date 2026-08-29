@@ -3,6 +3,10 @@
 **Data:** 24/07/2026
 **Escopo:** fundação técnica da Fase 1, sem alteração da fonte oficial de verdade
 
+> Este documento é um registro histórico da auditoria inicial. O estado atual e as pendências do MVP estão em
+> [docs/07-mvp-gap-analysis.md](07-mvp-gap-analysis.md) e o aceite executável está em
+> [docs/09-technical-acceptance.md](09-technical-acceptance.md).
+
 ## Auditoria inicial
 
 - O repositório continha um único módulo Spring Boot com Java 21, PostgreSQL, Flyway e migrações `V1` a `V4`.
